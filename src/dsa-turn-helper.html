@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>DSA Turn Helper</title>
+
+    <style>
+        body {
+            font-size: 2rem;
+            font-family: "Times New Roman", Times, serif;
+            background-color: #ffffff;
+        }
+
+        button {
+            /* font-size: 1.1rem; */
+            text-decoration: none;
+
+            border: solid 1px black;
+            border-radius: 4px;
+
+            padding: 0.3em 0.7em;
+
+            background-color: #ffffff;
+            cursor: pointer;
+
+            transition-duration: 0.2s;
+
+            /* top | horizontal | bottom */
+            margin: auto 2px auto;
+        }
+
+        button:hover {
+            /* color: #9555af; */
+            /* border-color: #9555af; */
+            background-color: #eeeeee;
+        }
+
+        input {
+            font-size: 1.1rem;
+        }
+
+        #toolbar {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        #flex-container {
+            display: flex;
+            flex-direction: row;
+            /* text-align: center; */
+        }
+
+        #overview {
+            /* background-color: #f1f1f1; */
+            padding: 10px;
+            flex: 50%;
+        }
+
+        #action {
+            /* background-color: dodgerblue; */
+            padding: 10px;
+            flex: 50%;
+        }
+
+        /* Responsive layout - makes a one column-layout instead of two-column layout */
+        @media (max-width: 1400px) {
+            #flex-container {
+                flex-direction: column;
+            }
+        }
+
+        /* .party {
+            color: #f0ab2b;
+        } */
+
+        /* .fr {
+            margin-left: auto;
+            order: 2; 
+        } */
+
+        .short-input {
+            width: 4.5em;
+        }
+    </style>
+
+    <script>
+        "use strict";
+
+        // Util
+
+        function uuidv4() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', (event) => {
+            document.getElementById('file-input')
+                .addEventListener('change', load_parties, false);
+
+            render_parties();
+        });
+
+        function add_party() {
+            let name = document.getElementById("party-name").value;
+
+            if (name === "") {
+                name = "No Name :("
+            }
+
+            let color = document.getElementById("party-color").value;
+            let individuals = [];
+
+            parties.push({ name, color, individuals });
+            render_parties();
+        }
+
+
+
+        function download_parties() {
+            let current_date = new Date().toJSON();
+            let filename = `dsa-turn-helper-${current_date}.json`;
+            let text = JSON.stringify(parties);
+
+            let element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+
+            element.style.display = 'none';
+            document.body.appendChild(element);
+
+            element.click();
+
+            document.body.removeChild(element);
+        }
+
+        function trigger_load_parties() {
+            document.getElementById('file-input').click();
+        }
+
+        function load_parties(event) {
+            let file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+            let reader = new FileReader();
+            reader.onload = (eve) => {
+                let contents = eve.target.result;
+                let parsed_parties = JSON.parse(contents);
+                parties = parsed_parties;
+                render_parties();
+
+            };
+            reader.readAsText(file);
+        }
+
+        // 48d48d
+        // ff4a4a
+        let parties = [
+            { name: "Players", color: "#7de8b2", individuals: [] },
+            { name: "Enemies", color: "#ff9393", individuals: [] },
+        ];
+
+        // Full recreate on every change, not the most efficient.
+        // But this is fairly small anyway and plays nicely with history view.
+        function render_parties() {
+            let new_parties_node = document.createElement("div");
+            new_parties_node.id = "parties";
+
+            parties.map((party, party_id) => {
+                // console.log(`id: ${id}`);
+                new_parties_node.appendChild(
+                    make_party(party, party_id)
+                );
+            });
+
+            let parties_node = document.getElementById("parties");
+            parties_node.replaceWith(new_parties_node);
+        }
+
+        function make_party(party, party_id) {
+            let node = document.createElement('div');
+            node.className = "party";
+
+            node.appendChild(make_party_toolbar(party, party_id));
+
+            party.individuals.map((individual) => {
+                node.appendChild(make_individual(individual));
+            });
+
+            node.style.marginBottom = "10px";
+
+            return node;
+        }
+
+        function add_input_restore(input, restore_name, party, party_id) {
+            let restore_val = party[restore_name];
+            if (restore_val !== undefined) {
+                input.value = restore_val;
+            }
+            input.addEventListener('change', (event) => {
+                parties[party_id][restore_name] = event.target.value;
+            });
+        }
+
+        function make_party_toolbar(party, party_id) {
+            let node = document.createElement('div');
+            node.className = "party-toolbar";
+            node.style.backgroundColor = party.color;
+            node.style.display = "flex";
+
+            node.appendChild(document.createTextNode(party.name));
+
+            let flex_box = document.createElement('div');
+            flex_box.style.display = "flex";
+            flex_box.style.justifyContent = "flex-end";
+            flex_box.style.marginLeft = "auto";
+
+            let name_input = document.createElement('input');
+            name_input.className = "fr";
+            name_input.type = "text";
+            name_input.placeholder = "Name";
+            name_input.style.width = "9em";
+            add_input_restore(name_input, "name_input", party, party_id);
+            flex_box.appendChild(name_input);
+
+            let health_input = document.createElement('input');
+            health_input.className = "short-input fr";
+            health_input.type = "number";
+            health_input.placeholder = "Health";
+            add_input_restore(health_input, "health_input", party, party_id);
+            flex_box.appendChild(health_input);
+
+            let initiative_input = document.createElement('input');
+            initiative_input.className = "short-input fr";
+            initiative_input.type = "number";
+            initiative_input.placeholder = "Initiative";
+            add_input_restore(initiative_input, "initiative_input", party, party_id);
+            flex_box.appendChild(initiative_input);
+
+            let add_btn = document.createElement('button');
+            add_btn.className = "fr";
+            add_btn.textContent = "Add";
+            add_btn.style.margin = "0 0 0 5px";
+            flex_box.appendChild(add_btn);
+
+            let delete_btn = document.createElement('button');
+            delete_btn.className = "fr";
+            delete_btn.textContent = "Delete Party";
+            delete_btn.style.margin = "0 0 0 30px";
+            flex_box.appendChild(delete_btn);
+
+            node.appendChild(flex_box);
+
+            return node;
+        }
+
+        // individual {name: str, health: num, initiative: num}
+        function make_individual(individual) {
+            let node = document.createElement('div');
+            node.className = "individual";
+            node.style.display = "flex";
+            node.style.flexDirection = "row";
+
+            return node;
+        }
+    </script>
+</head>
+
+<body>
+    <div id="flex-container">
+        <div id="overview">
+            <div id="toolbar">
+                <div style="display: flex;">
+                    DSA
+                    <input type="text" id="party-name" name="party-name" placeholder="New Party Name"
+                        style="margin-left: 10px;">
+                    <input style="height: 90%;" type="color" id="party-color" name="party-name" value="#e8b27d">
+                    <button style="margin: 0;" type="button" onclick="add_party()">Add Party</button>
+                </div>
+
+                <div style="display: flex; margin-left: auto; justify-content: flex-end;">
+                    <button style="margin: 0;" type="button" onclick="trigger_load_parties()">Load</button>
+                    <button style="margin: 0;" type="button" onclick="download_parties()">Download</button>
+                </div>
+                <input type="file" id="file-input" class="fr" style="display: none;" />
+            </div>
+
+            <hr />
+
+            <div id="parties"></div>
+        </div>
+        <div id="action"></div>
+    </div>
+</body>
+
+</html>
