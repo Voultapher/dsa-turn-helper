@@ -16,9 +16,9 @@
             text-decoration: none;
 
             border: solid 1px black;
-            border-radius: 4px;
+            border-radius: 0px;
 
-            padding: 0.3em 0.7em;
+            padding: 0.3rem 0.7rem;
 
             background-color: #ffffff;
             cursor: pointer;
@@ -69,17 +69,18 @@
             }
         }
 
-        /* .party {
-            color: #f0ab2b;
-        } */
-
-        /* .fr {
-            margin-left: auto;
-            order: 2; 
-        } */
-
         .short-input {
-            width: 4.5em;
+            width: 5rem;
+        }
+
+        .individual {
+            font-size: 1.4rem;
+            /* border: 1px solid black; */
+            margin: 5px auto;
+        }
+
+        .individual>p {
+            margin: 0;
         }
     </style>
 
@@ -88,11 +89,31 @@
 
         // Util
 
-        function uuidv4() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
+        // Version 4.0
+        const pSBC = (p, c0, c1, l) => {
+            let r, g, b, P, f, t, h, i = parseInt, m = Math.round, a = typeof (c1) == "string";
+            if (typeof (p) != "number" || p < -1 || p > 1 || typeof (c0) != "string" || (c0[0] != 'r' && c0[0] != '#') || (c1 && !a)) return null;
+            if (!this.pSBCr) this.pSBCr = (d) => {
+                let n = d.length, x = {};
+                if (n > 9) {
+                    [r, g, b, a] = d = d.split(","), n = d.length;
+                    if (n < 3 || n > 4) return null;
+                    x.r = i(r[3] == "a" ? r.slice(5) : r.slice(4)), x.g = i(g), x.b = i(b), x.a = a ? parseFloat(a) : -1
+                } else {
+                    if (n == 8 || n == 6 || n < 4) return null;
+                    if (n < 6) d = "#" + d[1] + d[1] + d[2] + d[2] + d[3] + d[3] + (n > 4 ? d[4] + d[4] : "");
+                    d = i(d.slice(1), 16);
+                    if (n == 9 || n == 5) x.r = d >> 24 & 255, x.g = d >> 16 & 255, x.b = d >> 8 & 255, x.a = m((d & 255) / 0.255) / 1000;
+                    else x.r = d >> 16, x.g = d >> 8 & 255, x.b = d & 255, x.a = -1
+                } return x
+            };
+            h = c0.length > 9, h = a ? c1.length > 9 ? true : c1 == "c" ? !h : false : h, f = this.pSBCr(c0), P = p < 0, t = c1 && c1 != "c" ? this.pSBCr(c1) : P ? { r: 0, g: 0, b: 0, a: -1 } : { r: 255, g: 255, b: 255, a: -1 }, p = P ? p * -1 : p, P = 1 - p;
+            if (!f || !t) return null;
+            if (l) r = m(P * f.r + p * t.r), g = m(P * f.g + p * t.g), b = m(P * f.b + p * t.b);
+            else r = m((P * f.r ** 2 + p * t.r ** 2) ** 0.5), g = m((P * f.g ** 2 + p * t.g ** 2) ** 0.5), b = m((P * f.b ** 2 + p * t.b ** 2) ** 0.5);
+            a = f.a, t = t.a, f = a >= 0 || t >= 0, a = f ? a < 0 ? t : t < 0 ? a : a * P + t * p : 0;
+            if (h) return "rgb" + (f ? "a(" : "(") + r + "," + g + "," + b + (f ? "," + m(a * 1000) / 1000 : "") + ")";
+            else return "#" + (4294967296 + r * 16777216 + g * 65536 + b * 256 + (f ? m(a * 255) : 0)).toString(16).slice(1, f ? undefined : -2)
         }
 
         window.addEventListener('DOMContentLoaded', (event) => {
@@ -106,7 +127,7 @@
             let name = document.getElementById("party-name").value;
 
             if (name === "") {
-                name = "No Name :("
+                name = "Die Namenlosen"
             }
 
             let color = document.getElementById("party-color").value;
@@ -115,8 +136,6 @@
             parties.push({ name, color, individuals });
             render_parties();
         }
-
-
 
         function download_parties() {
             let current_date = new Date().toJSON();
@@ -155,21 +174,26 @@
             reader.readAsText(file);
         }
 
-        // 48d48d
-        // ff4a4a
+        let test_individuals_a = { name: "Gubo Der Weise", health: 33, initiative: 12 };
+        let test_individuals_b = { name: "Bose Kopf 1", health: 21, initiative: 7 };
+        let test_individuals_c = { name: "Schlange", health: 6, initiative: 21 };
+
         let parties = [
-            { name: "Players", color: "#7de8b2", individuals: [] },
-            { name: "Enemies", color: "#ff9393", individuals: [] },
+            { name: "Players", color: "#7de8b2", individuals: [test_individuals_a] },
+            { name: "Enemies", color: "#ff9393", individuals: [test_individuals_b, test_individuals_c] },
         ];
 
         // Full recreate on every change, not the most efficient.
         // But this is fairly small anyway and plays nicely with history view.
+        //
+        // Kind of a poor mans React.
         function render_parties() {
+            console.debug("render_parties was called", JSON.stringify(parties));
+
             let new_parties_node = document.createElement("div");
             new_parties_node.id = "parties";
 
             parties.map((party, party_id) => {
-                // console.log(`id: ${id}`);
                 new_parties_node.appendChild(
                     make_party(party, party_id)
                 );
@@ -185,8 +209,12 @@
 
             node.appendChild(make_party_toolbar(party, party_id));
 
-            party.individuals.map((individual) => {
-                node.appendChild(make_individual(individual));
+            let light_color_a = pSBC(0.75, party.color);
+            let light_color_b = pSBC(0.92, party.color);
+
+            party.individuals.map((individual, i) => {
+                let color = (i % 2) === 0 ? light_color_a : light_color_b;
+                node.appendChild(make_individual(color, individual, party_id, i));
             });
 
             node.style.marginBottom = "10px";
@@ -218,10 +246,9 @@
             flex_box.style.marginLeft = "auto";
 
             let name_input = document.createElement('input');
-            name_input.className = "fr";
             name_input.type = "text";
             name_input.placeholder = "Name";
-            name_input.style.width = "9em";
+            name_input.style.width = "10rem";
             add_input_restore(name_input, "name_input", party, party_id);
             flex_box.appendChild(name_input);
 
@@ -240,15 +267,30 @@
             flex_box.appendChild(initiative_input);
 
             let add_btn = document.createElement('button');
-            add_btn.className = "fr";
             add_btn.textContent = "Add";
             add_btn.style.margin = "0 0 0 5px";
+            add_btn.addEventListener('click', (event) => {
+                let name = name_input.value;
+
+                if (name === "") {
+                    name = (Math.floor(Math.random() * 2) === 0) ? "Die Namenlose" : "Der Namenlose";
+                }
+
+                let health = Number(health_input.value);
+                let initiative = Number(initiative_input.value);
+
+                parties[party_id].individuals.push({ name, health, initiative });
+                render_parties();
+            });
             flex_box.appendChild(add_btn);
 
             let delete_btn = document.createElement('button');
-            delete_btn.className = "fr";
             delete_btn.textContent = "Delete Party";
             delete_btn.style.margin = "0 0 0 30px";
+            delete_btn.addEventListener('click', (event) => {
+                parties.splice(party_id, 1);
+                render_parties();
+            });
             flex_box.appendChild(delete_btn);
 
             node.appendChild(flex_box);
@@ -257,11 +299,37 @@
         }
 
         // individual {name: str, health: num, initiative: num}
-        function make_individual(individual) {
+        function make_individual(color, individual, party_id, id) {
             let node = document.createElement('div');
             node.className = "individual";
             node.style.display = "flex";
             node.style.flexDirection = "row";
+            node.style.backgroundColor = color;
+
+
+            let name_node = document.createElement('p');
+            name_node.style.width = "50%";
+            name_node.appendChild(document.createTextNode(individual.name));
+            node.appendChild(name_node);
+
+            let health_node = document.createElement('p');
+            health_node.style.width = "15%";
+            health_node.appendChild(document.createTextNode(`H: ${individual.health}`));
+            node.appendChild(health_node);
+
+            let initiative_node = document.createElement('p');
+            initiative_node.appendChild(document.createTextNode(`I: ${individual.initiative}`));
+            node.appendChild(initiative_node);
+
+            let delete_btn = document.createElement('button');
+            delete_btn.textContent = "Delete";
+            delete_btn.style.margin = "auto";
+            delete_btn.style.marginRight = "0";
+            delete_btn.addEventListener('click', (event) => {
+                parties[party_id].individuals.splice(id, 1);
+                render_parties();
+            });
+            node.appendChild(delete_btn);
 
             return node;
         }
@@ -275,7 +343,7 @@
                 <div style="display: flex;">
                     DSA
                     <input type="text" id="party-name" name="party-name" placeholder="New Party Name"
-                        style="margin-left: 10px;">
+                        style="margin-left: 10px; width: 12rem;">
                     <input style="height: 90%;" type="color" id="party-color" name="party-name" value="#e8b27d">
                     <button style="margin: 0;" type="button" onclick="add_party()">Add Party</button>
                 </div>
@@ -284,7 +352,7 @@
                     <button style="margin: 0;" type="button" onclick="trigger_load_parties()">Load</button>
                     <button style="margin: 0;" type="button" onclick="download_parties()">Download</button>
                 </div>
-                <input type="file" id="file-input" class="fr" style="display: none;" />
+                <input type="file" id="file-input" style="display: none;" />
             </div>
 
             <hr />
