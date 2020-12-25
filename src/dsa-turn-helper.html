@@ -56,7 +56,7 @@
             flex: 50%;
         }
 
-        #action {
+        #simulation {
             /* background-color: dodgerblue; */
             padding: 10px;
             flex: 50%;
@@ -70,16 +70,17 @@
         }
 
         .short-input {
-            width: 5rem;
+            width: 5.5rem;
         }
 
         .individual {
             font-size: 1.4rem;
             /* border: 1px solid black; */
             margin: 5px auto;
+            align-items: center;
         }
 
-        .individual>p {
+        .individual>div {
             margin: 0;
         }
     </style>
@@ -116,11 +117,16 @@
             else return "#" + (4294967296 + r * 16777216 + g * 65536 + b * 256 + (f ? m(a * 255) : 0)).toString(16).slice(1, f ? undefined : -2)
         }
 
+        // --- Parties ---
+
         window.addEventListener('DOMContentLoaded', (event) => {
             document.getElementById('file-input')
                 .addEventListener('change', load_parties, false);
 
             render_parties();
+
+            // Debug
+            init_sim();
         });
 
         function add_party() {
@@ -188,7 +194,7 @@
         //
         // Kind of a poor mans React.
         function render_parties() {
-            console.debug("render_parties was called", JSON.stringify(parties));
+            // console.debug("render_parties was called", JSON.stringify(parties));
 
             let new_parties_node = document.createElement("div");
             new_parties_node.id = "parties";
@@ -248,21 +254,21 @@
             let name_input = document.createElement('input');
             name_input.type = "text";
             name_input.placeholder = "Name";
-            name_input.style.width = "10rem";
+            name_input.style.width = "8rem";
             add_input_restore(name_input, "name_input", party, party_id);
             flex_box.appendChild(name_input);
 
             let health_input = document.createElement('input');
-            health_input.className = "short-input fr";
+            health_input.className = "short-input";
             health_input.type = "number";
             health_input.placeholder = "Health";
             add_input_restore(health_input, "health_input", party, party_id);
             flex_box.appendChild(health_input);
 
             let initiative_input = document.createElement('input');
-            initiative_input.className = "short-input fr";
+            initiative_input.className = "short-input";
             initiative_input.type = "number";
-            initiative_input.placeholder = "Initiative";
+            initiative_input.placeholder = "Base INI";
             add_input_restore(initiative_input, "initiative_input", party, party_id);
             flex_box.appendChild(initiative_input);
 
@@ -306,20 +312,7 @@
             node.style.flexDirection = "row";
             node.style.backgroundColor = color;
 
-
-            let name_node = document.createElement('p');
-            name_node.style.width = "50%";
-            name_node.appendChild(document.createTextNode(individual.name));
-            node.appendChild(name_node);
-
-            let health_node = document.createElement('p');
-            health_node.style.width = "15%";
-            health_node.appendChild(document.createTextNode(`H: ${individual.health}`));
-            node.appendChild(health_node);
-
-            let initiative_node = document.createElement('p');
-            initiative_node.appendChild(document.createTextNode(`I: ${individual.initiative}`));
-            node.appendChild(initiative_node);
+            make_individual_inner(node, individual);
 
             let delete_btn = document.createElement('button');
             delete_btn.textContent = "Delete";
@@ -330,6 +323,151 @@
                 render_parties();
             });
             node.appendChild(delete_btn);
+
+            return node;
+        }
+
+        function make_individual_inner(node, individual) {
+            let name_node = document.createElement('div');
+            name_node.style.width = "50%";
+            name_node.appendChild(document.createTextNode(individual.name));
+            node.appendChild(name_node);
+
+            let health_node = document.createElement('div');
+            health_node.style.width = "15%";
+            health_node.appendChild(document.createTextNode(`H: ${individual.health}`));
+            node.appendChild(health_node);
+
+            let initiative_node = document.createElement('div');
+            initiative_node.appendChild(document.createTextNode(`I: ${individual.initiative}`));
+            node.appendChild(initiative_node);
+
+            return node;
+        }
+
+        // --- Simulation ---
+
+        let sim = {};
+
+        function init_sim() {
+            sim = {
+                cursor: 0,
+                turn: 0,
+                turn_length: parties.reduce((sum, party) => sum + party.individuals.length, 0),
+                history: [JSON.parse(JSON.stringify(parties))],
+            };
+
+            if (sim.turn_length < 1) {
+                alert("Simulating no-one breaks the universe! Don't do that.");
+                return;
+            }
+
+            render_sim();
+        }
+
+        function step_forward() {
+
+        }
+
+        function step_back() {
+
+        }
+
+        function render_sim() {
+            // console.debug("render_sim was called", JSON.stringify(sim));
+
+            let { cursor, turn, turn_length, history } = sim;
+
+            if (cursor >= turn_length) {
+                sim.cursor = 0;
+                sim.turn += 1;
+            } else if (cursor < 0) {
+                if (sim.turn > 0) {
+                    sim.cursor = turn_length - 1;
+                    sim.turn -= 1;
+                } else {
+                    sim.cursor = 0;
+                }
+            }
+
+            // let active_parties = history[turn];
+            let active_parties = history[0];
+
+            let new_sim_box_node = document.createElement("div");
+            new_sim_box_node.id = "sim-box";
+
+            let individuals = active_parties.map((party, party_id) => {
+                let light_color_a = pSBC(0.75, party.color);
+                let light_color_b = pSBC(0.92, party.color);
+
+                return party.individuals.map((individual, i) => {
+                    let color = (i % 2) === 0 ? light_color_a : light_color_b;
+
+                    return [party_id, i, color, individual];
+                });
+            }).flat();
+
+            new_sim_box_node.appendChild(make_sim_toolbar());
+
+            individuals
+                .sort((a, b) => (b[3].initiative) - a[3].initiative)
+                .map(([party_id, id, color, individual], i) => {
+                    new_sim_box_node.appendChild(
+                        make_sim_individual(color, individual, i === sim.cursor)
+                    );
+                });
+
+            let sim_box_node = document.getElementById("sim-box");
+            sim_box_node.replaceWith(new_sim_box_node);
+        }
+
+        function make_sim_toolbar() {
+            let node = document.createElement('div');
+            node.className = "individual";
+            node.style.display = "flex";
+            node.style.flexDirection = "row";
+            node.style.justifyContent = "flex-end";
+
+            node.appendChild(document.createTextNode(
+                `Turn: ${sim.turn + 1}.${sim.cursor + 1}`
+            ));
+
+            let previous_btn = document.createElement('button');
+            previous_btn.textContent = "🠔";
+            previous_btn.style.margin = "0 0 0 10px";
+            previous_btn.addEventListener('click', (event) => {
+                sim.cursor -= 1;
+                render_sim();
+            });
+            node.appendChild(previous_btn);
+
+            let next_btn = document.createElement('button');
+            next_btn.textContent = "🠖";
+            next_btn.style.margin = "0";
+            next_btn.addEventListener('click', (event) => {
+                sim.cursor += 1;
+                render_sim();
+            });
+            node.appendChild(next_btn);
+
+            return node;
+        }
+
+        function make_sim_individual(color, individual, is_current) {
+            let node = document.createElement('div');
+            node.className = "individual";
+            node.style.display = "flex";
+            node.style.flexDirection = "row";
+            node.style.backgroundColor = color;
+
+            let pointer_box = document.createElement('div');
+            pointer_box.style.width = "2rem";
+            if (is_current === true) {
+                pointer_box.appendChild(document.createTextNode("->"));
+            }
+            node.appendChild(pointer_box);
+
+            make_individual_inner(node, individual);
 
             return node;
         }
@@ -359,7 +497,16 @@
 
             <div id="parties"></div>
         </div>
-        <div id="action"></div>
+        <div id="simulation">
+            <div id="sim-toolbar" style="display: flex;">
+                Simulation
+                <button style="margin: 0 0 0 auto;" type="button" onclick="init_sim()">New</button>
+            </div>
+
+            <hr />
+
+            <div id="sim-box"></div>
+        </div>
     </div>
 </body>
 
