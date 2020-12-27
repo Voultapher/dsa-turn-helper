@@ -18,7 +18,7 @@ Somewhat modern browser
 
 - Open https://voultapher.github.io/dsa-turn-helper/src/dsa-turn-helper.html
 
-### Off version
+### Offline version
 
 - Open https://voultapher.github.io/dsa-turn-helper/src/dsa-turn-helper.html and download the static html page, for example via save as.
 - Load the static html page in your browser.

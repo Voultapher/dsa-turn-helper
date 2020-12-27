@@ -6,13 +6,17 @@
 
     <style>
         body {
+            /* width: 100%; */
+            /* height: 100%; */
+            /* margin: 0; */
+
             font-size: 2rem;
             font-family: "Times New Roman", Times, serif;
             background-color: #ffffff;
         }
 
         button {
-            /* font-size: 1.1rem; */
+            font-size: 0.5em;
             text-decoration: none;
 
             border: solid 1px black;
@@ -42,7 +46,27 @@
         }
 
         input {
-            font-size: 1.1rem;
+            font-size: 0.5em;
+            border: 1px solid #4F4F4F;
+            /* margin: 0 1px; */
+        }
+
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 32px;
+            height: 32px;
+            box-sizing: content-box;
+            padding: 0;
+            /* border: 1px solid black; */
+        }
+
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        input[type="color"]::-webkit-color-swatch {
+            border: none;
         }
 
         #toolbar {
@@ -56,30 +80,46 @@
         }
 
         #overview {
-            padding: 10px;
+            padding: 0.3125em;
             flex: 50%;
         }
 
         #turn-view {
-            padding: 10px;
+            padding: 0.3125em;
             flex: 50%;
         }
 
         /* Responsive layout - makes a one column-layout instead of two-column layout */
-        @media (max-width: 1400px) {
+        @media (max-width: 88rem) {
+            body {
+                /* Scale up the base size to make it easier on mobile. */
+                font-size: 4rem;
+            }
+
             #flex-container {
                 flex-direction: column;
+            }
+
+            #overview {
+                padding: 0;
+            }
+
+            #turn-view {
+                padding: 0;
+            }
+
+            #region-sep {
+                width: 100%;
             }
         }
 
         .short-input {
-            width: 5.5rem;
+            width: 4.75em;
         }
 
         .individual {
-            font-size: 1.4rem;
-            /* border: 1px solid black; */
-            margin: 5px auto;
+            font-size: 0.7em;
+            margin: 0.2232em auto;
             align-items: center;
         }
 
@@ -234,7 +274,7 @@
                 node.appendChild(make_individual(color, individual, party_id, i));
             });
 
-            node.style.marginBottom = "20px";
+            node.style.marginBottom = "0.625em";
 
             return node;
         }
@@ -265,7 +305,7 @@
             let name_input = document.createElement('input');
             name_input.type = "text";
             name_input.placeholder = "Name";
-            name_input.style.width = "8rem";
+            name_input.style.width = "8em";
             add_input_restore(name_input, "name_input", party, party_id);
             flex_box.appendChild(name_input);
 
@@ -285,7 +325,7 @@
 
             let add_btn = document.createElement('button');
             add_btn.textContent = "Add";
-            add_btn.style.margin = "0 0 0 5px";
+            add_btn.style.margin = "0 0 0 0.3em";
             add_btn.addEventListener('click', (event) => {
                 let name = name_input.value;
 
@@ -303,7 +343,7 @@
 
             let delete_btn = document.createElement('button');
             delete_btn.textContent = "Delete Party";
-            delete_btn.style.margin = "0 0 0 30px";
+            delete_btn.style.margin = "0 0 0 2.3em";
             delete_btn.addEventListener('click', (event) => {
                 parties.splice(party_id, 1);
                 render_parties();
@@ -324,10 +364,25 @@
             node.style.backgroundColor = color;
 
             let name_node = document.createElement('div');
-            // name_node.style.width = "50%";
+            name_node.style.width = "10em";
+            name_node.style.textOverflow = "ellipsis";
+            name_node.style.overflow = "hidden";
+            name_node.style.whiteSpace = "nowrap";
+            name_node.style.marginRight = "0.5em";
             name_node.appendChild(document.createTextNode(individual.name));
-
             node.appendChild(name_node);
+
+            let health_node = document.createElement('div');
+            health_node.style.marginRight = "0.65em";
+            health_node.style.width = "3.5em";
+            health_node.appendChild(document.createTextNode(`H: ${individual.health}`));
+            node.appendChild(health_node);
+
+            let initiative_node = document.createElement('div');
+            // initiative_node.style.marginRight = "1em";
+            initiative_node.style.width = "3.5em";
+            initiative_node.appendChild(document.createTextNode(`I: ${individual.initiative}`));
+            node.appendChild(initiative_node);
 
             let flex_box = document.createElement('div');
             flex_box.style.display = "flex";
@@ -336,22 +391,10 @@
             flex_box.style.alignItems = "center";
             flex_box.style.margin = "0 0 0 auto";
 
-            let health_node = document.createElement('div');
-            health_node.style.marginRight = "1.3rem";
-            health_node.style.width = "5rem";
-            health_node.appendChild(document.createTextNode(`H: ${individual.health}`));
-
-            flex_box.appendChild(health_node);
-
-            let initiative_node = document.createElement('div');
-            initiative_node.style.marginRight = "6.7rem";
-            initiative_node.style.width = "5rem";
-            initiative_node.appendChild(document.createTextNode(`I: ${individual.initiative}`));
-            flex_box.appendChild(initiative_node);
-
             let delete_btn = document.createElement('button');
             delete_btn.textContent = "Delete";
             delete_btn.style.marginRight = "0";
+            delete_btn.style.fontSize = "0.625em";
             delete_btn.addEventListener('click', (event) => {
                 parties[party_id].individuals.splice(id, 1);
                 render_parties();
@@ -449,8 +492,9 @@
             ));
 
             let previous_btn = document.createElement('button');
-            previous_btn.textContent = "🠔";
-            previous_btn.style.margin = "0 0 0 10px";
+            previous_btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path d="M0 0h24v24H0z" fill="none"/><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>';
+            previous_btn.style.margin = "0 0 0 0.625em";
+            previous_btn.style.height = "2.3em";
             previous_btn.addEventListener('click', (event) => {
                 sim.cursor -= 1;
                 render_sim();
@@ -458,8 +502,9 @@
             node.appendChild(previous_btn);
 
             let next_btn = document.createElement('button');
-            next_btn.textContent = "🠖";
+            next_btn.innerHTML = '<svg xmlns = "http://www.w3.org/2000/svg" height = "24" viewBox = "0 0 24 24" width = "24" ><path d="M0 0h24v24H0z" fill="none"/><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
             next_btn.style.margin = "0";
+            next_btn.style.height = "2.3em";
             next_btn.addEventListener('click', (event) => {
                 sim.cursor += 1;
                 render_sim();
@@ -469,6 +514,7 @@
             let new_btn = document.createElement('button');
             new_btn.textContent = "New";
             new_btn.style.margin = "0 0 0 auto";
+            new_btn.style.height = "2.3em";
             new_btn.addEventListener('click', init_sim);
             node.appendChild(new_btn);
 
@@ -480,22 +526,26 @@
             node.className = "individual";
             node.style.display = "flex";
             node.style.flexDirection = "row";
+            node.style.alignItems = "center";
             node.style.backgroundColor = color;
 
             let pointer_box = document.createElement('div');
-            pointer_box.style.width = "2rem";
-            pointer_box.style.height = "2rem";
+            pointer_box.style.width = "1em";
+            pointer_box.style.height = "1em";
+            pointer_box.style.padding = "0.14em";
+
             if (is_current === true) {
-                pointer_box.appendChild(document.createTextNode("🠖"));
+                pointer_box.innerHTML = '<svg xmlns = "http://www.w3.org/2000/svg" height = "24" viewBox = "0 0 24 24" width = "24" ><path d="M0 0h24v24H0z" fill="none"/><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
+
             }
             node.appendChild(pointer_box);
 
             let name_node = document.createElement('div');
-            name_node.style.width = "230px";  // Has to px for ellipsis to work.
+            name_node.style.width = "10em";
             name_node.style.textOverflow = "ellipsis";
             name_node.style.overflow = "hidden";
             name_node.style.whiteSpace = "nowrap";
-            name_node.style.marginRight = "1rem";
+            name_node.style.marginRight = "0.5em";
             name_node.appendChild(document.createTextNode(individual.name));
             node.appendChild(name_node);
 
@@ -504,18 +554,20 @@
             let health_input = document.createElement('input');
             health_input.type = "number";
             health_input.value = individual.health;
-            health_input.style.width = "3rem";
-            health_input.style.marginRight = "1.3rem";
-            health_input.style.marginLeft = "0.2rem";
+            health_input.style.width = "3em";
+            health_input.style.fontSize = "0.9em";
+            health_input.style.marginRight = "0.65em";
+            health_input.style.marginLeft = "0.1em";
             node.appendChild(health_input);
 
             node.appendChild(document.createTextNode("I:"));
 
             let initiative_input = document.createElement('input');
             initiative_input.type = "number";
-            initiative_input.style.width = "3rem";
+            initiative_input.style.width = "3em";
+            initiative_input.style.fontSize = "0.9em";
             initiative_input.value = individual.initiative;
-            initiative_input.style.marginLeft = "0.2rem";
+            initiative_input.style.marginLeft = "0.1em";
             node.appendChild(initiative_input);
 
             let flex_box = document.createElement('div');
@@ -525,16 +577,22 @@
             flex_box.style.alignItems = "center";
             flex_box.style.margin = "0 0 0 auto";
 
-            let disable_btn = document.createElement('button');
-            disable_btn.textContent = "Disable";
-            disable_btn.style.marginRight = "0";
-            disable_btn.addEventListener('click', (event) => {
+            let disable_label = document.createElement('label');
+            disable_label.for = "disable_checkbox";
+            disable_label.textContent = "skip";
+            disable_label.style.color = "#4F4F4F"
+            flex_box.appendChild(disable_label);
+            node.appendChild(flex_box);
+
+            let disable_checkbox = document.createElement('input');
+            disable_checkbox.type = "checkbox";
+            disable_checkbox.name = "disable_checkbox";
+            disable_checkbox.style.margin = "0 0.5em";
+            disable_checkbox.addEventListener('click', (event) => {
                 // parties[party_id].individuals.splice(id, 1);
                 // render_parties();
             });
-            flex_box.appendChild(disable_btn);
-
-            node.appendChild(flex_box);
+            flex_box.appendChild(disable_checkbox);
 
             return node;
         }
@@ -548,14 +606,17 @@
                 <div style="display: flex;">
                     DSA
                     <input type="text" id="party-name" name="party-name" placeholder="New Party Name"
-                        style="margin-left: 10px; width: 12rem;">
-                    <input style="height: 90%;" type="color" id="party-color" name="party-name" value="#e8b27d">
-                    <button style="margin: 0;" type="button" onclick="add_party()">Add Party</button>
+                        style="margin: 0 0 0 0.625em; width: 11em; height: 90%;">
+                    <input style="margin: 0 0.1em; height: 100%;" type="color" id="party-color" name="party-name"
+                        value="#e8b27d">
+                    <button style="margin: 0; height: 100%;" type="button" onclick="add_party()">Add Party</button>
                 </div>
 
                 <div style="display: flex; margin-left: auto; justify-content: flex-end;">
-                    <button style="margin: 0;" type="button" onclick="trigger_load_parties()">Load</button>
-                    <button style="margin: 0;" type="button" onclick="download_parties()">Download</button>
+                    <button style="margin: 0; height: 100%;" type="button"
+                        onclick="trigger_load_parties()">Load</button>
+                    <button style="margin: 0; height: 100%;" type="button"
+                        onclick="download_parties()">Download</button>
                 </div>
                 <input type="file" id="file-input" style="display: none;" />
             </div>
@@ -564,6 +625,9 @@
 
             <div id="parties"></div>
         </div>
+
+        <hr id="region-sep" />
+
         <div id="turn-view"></div>
     </div>
 </body>
