@@ -20,13 +20,19 @@
 
             padding: 0.3rem 0.7rem;
 
-            background-color: #ffffff;
+            color: black;
+            background-color: white;
             cursor: pointer;
 
             transition-duration: 0.2s;
 
             /* top | horizontal | bottom */
             margin: auto 2px auto;
+        }
+
+        hr {
+            border-top: 1px solid black;
+            border-bottom: none;
         }
 
         button:hover {
@@ -47,17 +53,14 @@
         #flex-container {
             display: flex;
             flex-direction: row;
-            /* text-align: center; */
         }
 
         #overview {
-            /* background-color: #f1f1f1; */
             padding: 10px;
             flex: 50%;
         }
 
-        #simulation {
-            /* background-color: dodgerblue; */
+        #turn-view {
             padding: 10px;
             flex: 50%;
         }
@@ -180,13 +183,21 @@
             reader.readAsText(file);
         }
 
-        let test_individuals_a = { name: "Gubo Der Weise", health: 33, initiative: 12 };
-        let test_individuals_b = { name: "Bose Kopf 1", health: 21, initiative: 7 };
-        let test_individuals_c = { name: "Schlange", health: 6, initiative: 21 };
-
+        // Fill with usable demo.
         let parties = [
-            { name: "Players", color: "#7de8b2", individuals: [test_individuals_a] },
-            { name: "Enemies", color: "#ff9393", individuals: [test_individuals_b, test_individuals_c] },
+            {
+                name: "Players", color: "#7de8b2", individuals: [
+                    { name: "Gubo Der Weise", health: 33, initiative: 12 },
+                    { name: "Bratna die Schnelle", health: 10, initiative: 1 },
+                    { name: "Anoyah die Schlaue", health: 27, initiative: 17 },
+                ]
+            },
+            {
+                name: "Enemies", color: "#ff9393", individuals: [
+                    { name: "Midlife-crisis Troll", health: 54, initiative: 7 },
+                    { name: "Schlange", health: 6, initiative: 21 },
+                ]
+            },
         ];
 
         // Full recreate on every change, not the most efficient.
@@ -223,7 +234,7 @@
                 node.appendChild(make_individual(color, individual, party_id, i));
             });
 
-            node.style.marginBottom = "10px";
+            node.style.marginBottom = "20px";
 
             return node;
         }
@@ -312,124 +323,129 @@
             node.style.flexDirection = "row";
             node.style.backgroundColor = color;
 
-            make_individual_inner(node, individual);
+            let name_node = document.createElement('div');
+            // name_node.style.width = "50%";
+            name_node.appendChild(document.createTextNode(individual.name));
+
+            node.appendChild(name_node);
+
+            let flex_box = document.createElement('div');
+            flex_box.style.display = "flex";
+            flex_box.style.flexDirection = "row";
+            flex_box.style.justifyContent = "flex-end";
+            flex_box.style.alignItems = "center";
+            flex_box.style.margin = "0 0 0 auto";
+
+            let health_node = document.createElement('div');
+            health_node.style.marginRight = "1.3rem";
+            health_node.style.width = "5rem";
+            health_node.appendChild(document.createTextNode(`H: ${individual.health}`));
+
+            flex_box.appendChild(health_node);
+
+            let initiative_node = document.createElement('div');
+            initiative_node.style.marginRight = "6.7rem";
+            initiative_node.style.width = "5rem";
+            initiative_node.appendChild(document.createTextNode(`I: ${individual.initiative}`));
+            flex_box.appendChild(initiative_node);
 
             let delete_btn = document.createElement('button');
             delete_btn.textContent = "Delete";
-            delete_btn.style.margin = "auto";
             delete_btn.style.marginRight = "0";
             delete_btn.addEventListener('click', (event) => {
                 parties[party_id].individuals.splice(id, 1);
                 render_parties();
             });
-            node.appendChild(delete_btn);
+            flex_box.appendChild(delete_btn);
+
+            node.appendChild(flex_box);
 
             return node;
         }
 
-        function make_individual_inner(node, individual) {
-            let name_node = document.createElement('div');
-            name_node.style.width = "50%";
-            name_node.appendChild(document.createTextNode(individual.name));
-            node.appendChild(name_node);
-
-            let health_node = document.createElement('div');
-            health_node.style.width = "15%";
-            health_node.appendChild(document.createTextNode(`H: ${individual.health}`));
-            node.appendChild(health_node);
-
-            let initiative_node = document.createElement('div');
-            initiative_node.appendChild(document.createTextNode(`I: ${individual.initiative}`));
-            node.appendChild(initiative_node);
-
-            return node;
-        }
-
-        // --- Simulation ---
+        // --- Turn View Simulation ---
 
         let sim = {};
 
         function init_sim() {
-            sim = {
-                cursor: 0,
-                turn: 0,
-                turn_length: parties.reduce((sum, party) => sum + party.individuals.length, 0),
-                history: [JSON.parse(JSON.stringify(parties))],
-            };
+            let individuals = parties.map((party) => {
+                // Experimenting gave me the impression that just using the
+                // base color was less confusing in the simulation.
+                let light_color = pSBC(0.75, party.color);
 
-            if (sim.turn_length < 1) {
+                return party.individuals.map((individual, i) => {
+                    return [individual, light_color];
+                });
+            }).flat();
+
+            if (individuals.length < 1) {
                 alert("Simulating no-one breaks the universe! Don't do that.");
                 return;
             }
 
+            sim = {
+                cursor: 0,
+                round_length: individuals.length,
+                history: [{
+                    round: 0,
+                    turn: 0,
+                    individuals: JSON.parse(JSON.stringify(individuals))
+                }],
+            };
+
             render_sim();
         }
 
-        function step_forward() {
-
-        }
-
-        function step_back() {
-
-        }
 
         function render_sim() {
             // console.debug("render_sim was called", JSON.stringify(sim));
 
-            let { cursor, turn, turn_length, history } = sim;
-
-            if (cursor >= turn_length) {
+            // Prevent ngative time travel.
+            if (sim.cursor < 0) {
                 sim.cursor = 0;
-                sim.turn += 1;
-            } else if (cursor < 0) {
-                if (sim.turn > 0) {
-                    sim.cursor = turn_length - 1;
-                    sim.turn -= 1;
+            }
+
+            let { cursor, round_length, history } = sim;
+
+            if (cursor >= history.length) {
+                // Create new history entry if not been here before.
+                history[cursor] = JSON.parse(JSON.stringify(history[cursor - 1]));
+
+                if ((cursor % round_length) === 0) {
+                    history[cursor].round += 1;
+                    history[cursor].turn = 0;
                 } else {
-                    sim.cursor = 0;
+                    history[cursor].turn += 1;
                 }
             }
 
-            // let active_parties = history[turn];
-            let active_parties = history[0];
+            let { round, turn, individuals } = history[cursor];
 
             let new_sim_box_node = document.createElement("div");
-            new_sim_box_node.id = "sim-box";
+            new_sim_box_node.id = "turn-view";
 
-            let individuals = active_parties.map((party, party_id) => {
-                let light_color_a = pSBC(0.75, party.color);
-                let light_color_b = pSBC(0.92, party.color);
-
-                return party.individuals.map((individual, i) => {
-                    let color = (i % 2) === 0 ? light_color_a : light_color_b;
-
-                    return [party_id, i, color, individual];
-                });
-            }).flat();
-
-            new_sim_box_node.appendChild(make_sim_toolbar());
+            new_sim_box_node.appendChild(make_sim_toolbar(round, turn));
+            new_sim_box_node.appendChild(document.createElement('hr'));
 
             individuals
-                .sort((a, b) => (b[3].initiative) - a[3].initiative)
-                .map(([party_id, id, color, individual], i) => {
+                .sort((a, b) => (b[0].initiative - a[0].initiative))
+                .map(([individual, color], i) => {
                     new_sim_box_node.appendChild(
-                        make_sim_individual(color, individual, i === sim.cursor)
+                        make_sim_individual(color, individual, i === turn)
                     );
                 });
 
-            let sim_box_node = document.getElementById("sim-box");
+            let sim_box_node = document.getElementById("turn-view");
             sim_box_node.replaceWith(new_sim_box_node);
         }
 
-        function make_sim_toolbar() {
+        function make_sim_toolbar(round, turn) {
             let node = document.createElement('div');
-            node.className = "individual";
             node.style.display = "flex";
             node.style.flexDirection = "row";
-            node.style.justifyContent = "flex-end";
 
             node.appendChild(document.createTextNode(
-                `Turn: ${sim.turn + 1}.${sim.cursor + 1}`
+                `Turn: ${round + 1}.${turn + 1}`
             ));
 
             let previous_btn = document.createElement('button');
@@ -450,6 +466,12 @@
             });
             node.appendChild(next_btn);
 
+            let new_btn = document.createElement('button');
+            new_btn.textContent = "New";
+            new_btn.style.margin = "0 0 0 auto";
+            new_btn.addEventListener('click', init_sim);
+            node.appendChild(new_btn);
+
             return node;
         }
 
@@ -462,12 +484,57 @@
 
             let pointer_box = document.createElement('div');
             pointer_box.style.width = "2rem";
+            pointer_box.style.height = "2rem";
             if (is_current === true) {
-                pointer_box.appendChild(document.createTextNode("->"));
+                pointer_box.appendChild(document.createTextNode("🠖"));
             }
             node.appendChild(pointer_box);
 
-            make_individual_inner(node, individual);
+            let name_node = document.createElement('div');
+            name_node.style.width = "230px";  // Has to px for ellipsis to work.
+            name_node.style.textOverflow = "ellipsis";
+            name_node.style.overflow = "hidden";
+            name_node.style.whiteSpace = "nowrap";
+            name_node.style.marginRight = "1rem";
+            name_node.appendChild(document.createTextNode(individual.name));
+            node.appendChild(name_node);
+
+            node.appendChild(document.createTextNode("H:"));
+
+            let health_input = document.createElement('input');
+            health_input.type = "number";
+            health_input.value = individual.health;
+            health_input.style.width = "3rem";
+            health_input.style.marginRight = "1.3rem";
+            health_input.style.marginLeft = "0.2rem";
+            node.appendChild(health_input);
+
+            node.appendChild(document.createTextNode("I:"));
+
+            let initiative_input = document.createElement('input');
+            initiative_input.type = "number";
+            initiative_input.style.width = "3rem";
+            initiative_input.value = individual.initiative;
+            initiative_input.style.marginLeft = "0.2rem";
+            node.appendChild(initiative_input);
+
+            let flex_box = document.createElement('div');
+            flex_box.style.display = "flex";
+            flex_box.style.flexDirection = "row";
+            flex_box.style.justifyContent = "flex-end";
+            flex_box.style.alignItems = "center";
+            flex_box.style.margin = "0 0 0 auto";
+
+            let disable_btn = document.createElement('button');
+            disable_btn.textContent = "Disable";
+            disable_btn.style.marginRight = "0";
+            disable_btn.addEventListener('click', (event) => {
+                // parties[party_id].individuals.splice(id, 1);
+                // render_parties();
+            });
+            flex_box.appendChild(disable_btn);
+
+            node.appendChild(flex_box);
 
             return node;
         }
@@ -497,16 +564,7 @@
 
             <div id="parties"></div>
         </div>
-        <div id="simulation">
-            <div id="sim-toolbar" style="display: flex;">
-                Simulation
-                <button style="margin: 0 0 0 auto;" type="button" onclick="init_sim()">New</button>
-            </div>
-
-            <hr />
-
-            <div id="sim-box"></div>
-        </div>
+        <div id="turn-view"></div>
     </div>
 </body>
 
