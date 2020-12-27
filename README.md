@@ -10,11 +10,18 @@ This tools helps you manage DSA(Das Schwarze Auge) turn interactions.
 
 ## Requirements
 
-- Somewhat modern browser
+Somewhat modern browser
 
 ## Usage
 
-Load the static html page in your browser.
+### Online version
+
+- Open https://voultapher.github.io/dsa-turn-helper/src/dsa-turn-helper.html
+
+### Off version
+
+- Open https://voultapher.github.io/dsa-turn-helper/src/dsa-turn-helper.html and download the static html page, for example via save as.
+- Load the static html page in your browser.
 
 ## Contributing
 
