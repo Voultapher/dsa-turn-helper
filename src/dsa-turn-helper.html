@@ -97,6 +97,10 @@
             width: 4.75em;
         }
 
+        .individual-sim-input {
+            width: 3em;
+        }
+
         /* Responsive layout - makes a one column-layout instead of two-column layout */
         @media (max-width: 88rem) {
             body {
@@ -124,11 +128,15 @@
             }
 
             .individual-name-input {
-                width: 5em;
+                width: 4.5em;
             }
 
             .inidividual-num-input {
-                width: 3.5em;
+                width: 3em;
+            }
+
+            .individual-sim-input {
+                width: 2em;
             }
         }
 
@@ -570,9 +578,9 @@
             node.appendChild(document.createTextNode("H:"));
 
             let health_input = document.createElement('input');
+            health_input.className = "individual-sim-input";
             health_input.type = "number";
             health_input.value = individual.health;
-            health_input.style.width = "3em";
             health_input.style.fontSize = "0.9em";
             health_input.style.marginRight = "0.65em";
             health_input.style.marginLeft = "0.1em";
@@ -581,8 +589,8 @@
             node.appendChild(document.createTextNode("I:"));
 
             let initiative_input = document.createElement('input');
+            initiative_input.className = "individual-sim-input";
             initiative_input.type = "number";
-            initiative_input.style.width = "3em";
             initiative_input.style.fontSize = "0.9em";
             initiative_input.value = individual.initiative;
             initiative_input.style.marginLeft = "0.1em";
@@ -605,7 +613,9 @@
             let disable_checkbox = document.createElement('input');
             disable_checkbox.type = "checkbox";
             disable_checkbox.name = "disable_checkbox";
-            disable_checkbox.style.margin = "0 0.5em";
+            disable_checkbox.style.margin = "0 0.8em";
+            disable_checkbox.style.width = "2em";
+            disable_checkbox.style.height = "2em";
             disable_checkbox.addEventListener('click', (event) => {
                 // parties[party_id].individuals.splice(id, 1);
                 // render_parties();
