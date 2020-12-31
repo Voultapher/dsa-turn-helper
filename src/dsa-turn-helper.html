@@ -493,14 +493,8 @@
             let turn = round.turns[turn_cursor];
 
             if (turn === undefined) {
-                // We know atleast one entry is always there.
-                // let last_active_turn = round
-                //     .turns
-                //     .slice(turn_cursor)
-                //     .find(individual => !individual.skip);
-
-                // console.log(last_active_turn);
-                // Deep copy to avoid inteference.
+                // TODO check that at least one individual is still active.
+                // Or disable the skip box once only one remains.
                 round.turns.push(JSON.parse(JSON.stringify(sim.last_active_turn)));
             }
 
