@@ -156,6 +156,13 @@
 
         // Util
 
+        function uuidv4() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
         // Version 4.0
         const pSBC = (p, c0, c1, l) => {
             let r, g, b, P, f, t, h, i = parseInt, m = Math.round, a = typeof (c1) == "string";
@@ -249,14 +256,14 @@
         // Fill with usable demo.
         let parties = [
             {
-                name: "Players", color: "#7de8b2", individuals: [
+                name: "Players", color: "#5591ff", individuals: [
                     { name: "Gubo Der Weise", health: 33, initiative: 12 },
                     { name: "Bratna die Schnelle", health: 10, initiative: 1 },
                     { name: "Anoyah die Schlaue", health: 27, initiative: 17 },
                 ]
             },
             {
-                name: "Enemies", color: "#ff9393", individuals: [
+                name: "Enemies", color: "#ff417e", individuals: [
                     { name: "Midlife-crisis Troll", health: 54, initiative: 7 },
                     { name: "Echte Schlange", health: 6, initiative: 21 },
                 ]
@@ -289,8 +296,8 @@
 
             node.appendChild(make_party_toolbar(party, party_id));
 
-            let light_color_a = pSBC(0.75, party.color);
-            let light_color_b = pSBC(0.92, party.color);
+            let light_color_a = pSBC(0.72, party.color);
+            let light_color_b = pSBC(0.88, party.color);
 
             party.individuals.map((individual, i) => {
                 let color = (i % 2) === 0 ? light_color_a : light_color_b;
@@ -353,7 +360,17 @@
                 let name = name_input.value;
 
                 if (name === "") {
-                    name = (Math.floor(Math.random() * 2) === 0) ? "Die Namenlose" : "Der Namenlose";
+                    switch (Math.floor(Math.random() * 3)) {
+                        case 0:
+                            name = 'Die Namenlose';
+                            break;
+                        case 1:
+                            name = 'Das Namenlose';
+                            break;
+                        case 2:
+                            name = 'Der Namenlose';
+                            break;
+                    }
                 }
 
                 let health = Number(health_input.value);
@@ -440,7 +457,12 @@
                 let light_color = pSBC(0.75, party.color);
 
                 return party.individuals.map((individual, i) => {
-                    return [individual, light_color];
+                    // deep copy
+                    let sim_individual = JSON.parse(JSON.stringify(individual));
+
+                    sim_individual.light_color = light_color;
+                    sim_individual.uuid = uuidv4();
+                    return sim_individual;
                 });
             }).flat();
 
@@ -455,7 +477,7 @@
                     turn: 0,
                 },
                 rounds: [
-                    { turns: [JSON.parse(JSON.stringify(individuals))] }
+                    { turns: [individuals] }
                 ],
             };
 
@@ -468,13 +490,11 @@
         function render_sim() {
             // console.debug("render_sim was called", JSON.stringify(sim));
 
-            // // Prevent ngative time travel.
-            // if (sim.cursor < 0) {
-            //     sim.cursor = 0;
-            // }
             let { round: round_cursor, turn: turn_cursor } = sim.cursor;
 
             let round = sim.rounds[round_cursor];
+
+            let view_type = '';
 
             if (round === undefined) {
                 // Create new history entry if not been here before.
@@ -486,6 +506,8 @@
                 sim.rounds[round_cursor] = {
                     turns: [JSON.parse(JSON.stringify(last_active_turn))]
                 };
+
+                view_type = 'New Round';
             }
 
             round = sim.rounds[round_cursor];
@@ -496,6 +518,17 @@
                 // TODO check that at least one individual is still active.
                 // Or disable the skip box once only one remains.
                 round.turns.push(JSON.parse(JSON.stringify(sim.last_active_turn)));
+
+                if (view_type === '') {
+                    view_type = 'New Turn';
+                }
+            }
+
+            if (round_cursor === 0 && turn_cursor === 0) {
+                view_type = 'Start';
+            }
+            else if (view_type === '') {
+                view_type = 'History';
             }
 
             // Right now a turn only contains individuals, to make it easier
@@ -505,25 +538,25 @@
             let new_sim_box_node = document.createElement("div");
             new_sim_box_node.id = "turn-view";
 
-            new_sim_box_node.appendChild(make_sim_toolbar(round_cursor, turn_cursor));
+            new_sim_box_node.appendChild(make_sim_toolbar(round_cursor, turn_cursor, view_type));
             new_sim_box_node.appendChild(document.createElement('hr'));
 
             let sorted_individuals = individuals
-                .sort((a, b) => (b[0].initiative - a[0].initiative));
+                .sort((a, b) => (b.initiative - a.initiative));
 
-            let skipped_individuals = sorted_individuals.filter(x => x[0].skip);
-            let active_individuals = sorted_individuals.filter(x => !x[0].skip);
+            let skipped_individuals = sorted_individuals.filter(x => x.skip);
+            let active_individuals = sorted_individuals.filter(x => !x.skip);
 
-            active_individuals.map(([individual, color], i) => {
+            active_individuals.map((individual, i) => {
                 new_sim_box_node.appendChild(
-                    make_sim_individual(color, individual, i === turn_cursor)
+                    make_sim_individual(individual.light_color, individual, i === turn_cursor)
                 );
             });
 
             if (skipped_individuals.length > 0) {
                 new_sim_box_node.appendChild(document.createElement('hr'));
 
-                skipped_individuals.map(([individual, color], i) => {
+                skipped_individuals.map((individual, i) => {
                     new_sim_box_node.appendChild(
                         make_sim_individual("#eae8e8", individual, false)
                     );
@@ -536,10 +569,10 @@
 
         function active_round_length(turns) {
             return turns
-                .reduce((sum, individual) => sum + (individual[0].skip === true ? 0 : 1), 0);
+                .reduce((sum, individual) => sum + (individual.skip === true ? 0 : 1), 0);
         }
 
-        function make_sim_toolbar(round, turn) {
+        function make_sim_toolbar(round, turn, view_type) {
             let node = document.createElement('div');
             node.style.display = "flex";
             node.style.flexDirection = "row";
@@ -575,7 +608,7 @@
 
             let next_btn = document.createElement('button');
             next_btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg"  viewBox="0 0 24 24"  ><path d="M0 0h24v24H0z" fill="none"/><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
-            next_btn.style.margin = "0";
+            next_btn.style.margin = "0 0.625em 0 0";
             next_btn.style.lineHeight = "0";
             next_btn.style.width = "3em";
             next_btn.addEventListener('click', (event) => {
@@ -599,14 +632,23 @@
             });
             node.appendChild(next_btn);
 
+            node.appendChild(document.createTextNode(view_type));
+
             let new_btn = document.createElement('button');
-            new_btn.textContent = "New";
+            new_btn.textContent = "All New";
             new_btn.style.margin = "0 0 0 auto";
             new_btn.style.height = "2.2em";
             new_btn.addEventListener('click', init_sim);
             node.appendChild(new_btn);
 
             return node;
+        }
+
+        function make_select_option(value) {
+            let option_node = document.createElement('option');
+            option_node.value = value;
+            option_node.appendChild(document.createTextNode(value));
+            return option_node;
         }
 
         function make_sim_individual(color, individual, is_current) {
@@ -643,7 +685,7 @@
             health_input.className = "individual-sim-input";
             health_input.type = "number";
             health_input.value = individual.health;
-            health_input.style.fontSize = "0.9em";
+            health_input.style.fontSize = "0.8em";
             health_input.style.marginRight = "0.65em";
             health_input.style.marginLeft = "0.1em";
             health_input.addEventListener('change', (event) => {
@@ -657,14 +699,46 @@
             let initiative_input = document.createElement('input');
             initiative_input.className = "individual-sim-input";
             initiative_input.type = "number";
-            initiative_input.style.fontSize = "0.9em";
+            initiative_input.style.fontSize = "0.8em";
             initiative_input.value = individual.initiative;
-            initiative_input.style.marginLeft = "0.1em";
+            initiative_input.style.margin = "0 0.65em 0 0.1em";
             initiative_input.addEventListener('change', (event) => {
                 individual.initiative = Number(event.target.value);
                 render_sim();
             });
             node.appendChild(initiative_input);
+
+            let effect_select = document.createElement('select');
+            effect_select.style.margin = '0';
+            // effect_select.style.fontSize = '0.8em';
+            // effect_select.style.color = '#757575'
+
+            let select_placeholder = document.createElement('option');
+            select_placeholder.disabled = true;
+            select_placeholder.selected = true;
+            select_placeholder.hidden = true;
+            select_placeholder.appendChild(document.createTextNode('choose effect'));
+            effect_select.appendChild(select_placeholder);
+
+            effect_select.appendChild(make_select_option('Wunde'));
+            effect_select.appendChild(make_select_option('Ausweichen'));
+
+            effect_select.addEventListener('change', (event) => {
+                // switch (
+                switch (effect_select.value) {
+                    case 'Wunde':
+                        individual.initiative -= 4;
+                        break;
+                    case 'Ausweichen':
+                        individual.initiative -= 2;
+                        break;
+                    default:
+                        conosle.error(`Unknown effect value: ${effect_select.value}`);
+                }
+
+                render_sim();
+            });
+            node.appendChild(effect_select);
 
             let flex_box = document.createElement('div');
             flex_box.style.display = "flex";
@@ -689,7 +763,6 @@
             disable_checkbox.addEventListener('click', (event) => {
                 // Let's pray ref semantics stay the same.
                 let turn_cursor = sim.cursor.turn;
-                console.log(sim.cursor.turn);
 
                 // Apply skip status to all future events.
                 // This makes limited sense otherwise.
@@ -698,7 +771,6 @@
                     round_cursor < sim.rounds.length;
                     round_cursor++
                 ) {
-                    console.log(round_cursor, turn_cursor);
                     let round = sim.rounds[round_cursor];
                     for (
                         ;
@@ -706,9 +778,7 @@
                         turn_cursor++
                     ) {
                         let future_individual = round.turns[turn_cursor]
-                            .map(a => a[0])
-                            // Assumes unique names, TODO clean up with uuid.
-                            .find(future_individual => individual.name == future_individual.name);
+                            .find(future_individual => individual.uuid == future_individual.uuid);
 
                         future_individual.skip = disable_checkbox.checked;
                     }
@@ -736,7 +806,7 @@
                     <input type="text" id="party-name" name="party-name" placeholder="New Party Name"
                         style="margin: 0 0 0 0.625em; width: 11em; height: 100%; box-sizing: border-box;">
                     <input style="margin: 0 0.1em; height: 100%; width: 2.5em;" type="color" id="party-color"
-                        name="party-name" value="#e8b27d">
+                        name="party-name" value="#f0e1ce">
                     <button style="margin: 0; height: 100%" type="button" onclick="add_party()">Add Party</button>
                 </div>
 
