@@ -190,6 +190,10 @@
             else return "#" + (4294967296 + r * 16777216 + g * 65536 + b * 256 + (f ? m(a * 255) : 0)).toString(16).slice(1, f ? undefined : -2)
         }
 
+        function d6_roll() {
+            return Math.floor(Math.random() * (1 - 1 + 10)) + 1;
+        }
+
         // --- Parties ---
 
         window.addEventListener('DOMContentLoaded', (event) => {
@@ -450,20 +454,68 @@
 
         let sim = {};
 
+        function make_action_2_individual(action_1_individual) {
+            return {
+                uuid: action_1_individual.uuid,
+                name: action_1_individual.name,
+                health: action_1_individual.health,
+                initiative: action_1_individual.initiative - 8,
+                action: 2,
+                color: action_1_individual.color,
+            };
+        }
+
+        function make_action_split(individuals) {
+            let result = [];
+
+            individuals.forEach(individual => {
+                individual.action = 1;
+                result.push(individual);
+
+                if (individual.initiative > 0) {
+                    result.push(make_action_2_individual(individual));
+                }
+            });
+
+            return result;
+        }
+
+        function update_action_split(individuals) {
+            individuals.forEach(individual => {
+                let { action, initiative, uuid } = individual;
+
+                if (action === 2) {
+                    return;
+                }
+
+                let action_2_idx = individuals.findIndex(
+                    other => other.action === 2 && other.uuid === uuid
+                );
+
+                if (action_2_idx === -1 && initiative > 0) {
+                    individuals.push(make_action_2_individual(individual));
+                } else if (initiative > 0) {
+                    individuals[action_2_idx].initiative = initiative - 8;
+                } else {
+                    individuals.splice(action_2_idx, 1);
+                }
+            });
+        }
+
         function init_sim() {
             let individuals = parties.map((party) => {
                 // Experimenting gave me the impression that just using the
                 // base color was less confusing in the simulation.
-                let light_color = pSBC(0.75, party.color);
+                let light_color = pSBC(0.78, party.color);
 
-                return party.individuals.map((individual, i) => {
+                return make_action_split(party.individuals.map((individual, i) => {
                     // deep copy
                     let sim_individual = JSON.parse(JSON.stringify(individual));
 
-                    sim_individual.light_color = light_color;
+                    sim_individual.color = light_color;
                     sim_individual.uuid = uuidv4();
                     return sim_individual;
-                });
+                }));
             }).flat();
 
             if (individuals.length < 1) {
@@ -531,6 +583,10 @@
                 view_type = 'History';
             }
 
+            // Chaning initiative can have an effect on the action split.
+            // So apply it every time an update is made.
+            update_action_split(round.turns[turn_cursor]);
+
             // Right now a turn only contains individuals, to make it easier
             // to read alias it under that name.
             let individuals = round.turns[turn_cursor];
@@ -549,7 +605,7 @@
 
             active_individuals.map((individual, i) => {
                 new_sim_box_node.appendChild(
-                    make_sim_individual(individual.light_color, individual, i === turn_cursor)
+                    make_sim_individual(individual.color, individual, i === turn_cursor)
                 );
             });
 
@@ -578,9 +634,12 @@
             node.style.flexDirection = "row";
             node.style.alignItems = "center";
 
-            node.appendChild(document.createTextNode(
-                `Turn: ${round + 1}.${turn + 1}`
+            let turn_div = document.createElement('div');
+            turn_div.style.width = '10em';
+            turn_div.appendChild(document.createTextNode(
+                `Turn: ${round + 1}.${turn + 1} - ${view_type}`
             ));
+            node.appendChild(turn_div);
 
             let previous_btn = document.createElement('button');
             previous_btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>';
@@ -632,8 +691,6 @@
             });
             node.appendChild(next_btn);
 
-            node.appendChild(document.createTextNode(view_type));
-
             let new_btn = document.createElement('button');
             new_btn.textContent = "All New";
             new_btn.style.margin = "0 0 0 auto";
@@ -651,67 +708,10 @@
             return option_node;
         }
 
-        function make_sim_individual(color, individual, is_current) {
-            let node = document.createElement('div');
-            node.className = "individual";
-            node.style.display = "flex";
-            node.style.flexDirection = "row";
-            node.style.alignItems = "center";
-            node.style.backgroundColor = color;
-
-            let pointer_box = document.createElement('div');
-            pointer_box.style.width = "1em";
-            pointer_box.style.height = "1em";
-            pointer_box.style.padding = "0.14em";
-
-            if (is_current === true) {
-                pointer_box.innerHTML = '<svg xmlns = "http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
-
-            }
-            node.appendChild(pointer_box);
-
-            let name_node = document.createElement('div');
-            name_node.style.width = "10em";
-            name_node.style.textOverflow = "ellipsis";
-            name_node.style.overflow = "hidden";
-            name_node.style.whiteSpace = "nowrap";
-            name_node.style.marginRight = "0.5em";
-            name_node.appendChild(document.createTextNode(individual.name));
-            node.appendChild(name_node);
-
-            node.appendChild(document.createTextNode("H:"));
-
-            let health_input = document.createElement('input');
-            health_input.className = "individual-sim-input";
-            health_input.type = "number";
-            health_input.value = individual.health;
-            health_input.style.fontSize = "0.8em";
-            health_input.style.marginRight = "0.65em";
-            health_input.style.marginLeft = "0.1em";
-            health_input.addEventListener('change', (event) => {
-                individual.health = Number(event.target.value);
-                render_sim();
-            });
-            node.appendChild(health_input);
-
-            node.appendChild(document.createTextNode("I:"));
-
-            let initiative_input = document.createElement('input');
-            initiative_input.className = "individual-sim-input";
-            initiative_input.type = "number";
-            initiative_input.style.fontSize = "0.8em";
-            initiative_input.value = individual.initiative;
-            initiative_input.style.margin = "0 0.65em 0 0.1em";
-            initiative_input.addEventListener('change', (event) => {
-                individual.initiative = Number(event.target.value);
-                render_sim();
-            });
-            node.appendChild(initiative_input);
-
+        function make_effect_select(individual) {
             let effect_select = document.createElement('select');
             effect_select.style.margin = '0';
-            // effect_select.style.fontSize = '0.8em';
-            // effect_select.style.color = '#757575'
+            effect_select.style.fontSize = '0.625em';
 
             let select_placeholder = document.createElement('option');
             select_placeholder.disabled = true;
@@ -738,8 +738,11 @@
 
                 render_sim();
             });
-            node.appendChild(effect_select);
 
+            return effect_select;
+        }
+
+        function make_skip(individual) {
             let flex_box = document.createElement('div');
             flex_box.style.display = "flex";
             flex_box.style.flexDirection = "row";
@@ -790,7 +793,81 @@
                 render_sim();
             });
             flex_box.appendChild(disable_checkbox);
-            node.appendChild(flex_box);
+
+            return flex_box;
+        }
+
+        function make_sim_individual(color, individual, is_current) {
+            let node = document.createElement('div');
+            node.className = "individual";
+            node.style.display = "flex";
+            node.style.flexDirection = "row";
+            node.style.alignItems = "center";
+            node.style.backgroundColor = color;
+
+            let pointer_box = document.createElement('div');
+            pointer_box.style.width = "1em";
+            pointer_box.style.height = "1em";
+            pointer_box.style.padding = "0.14em";
+
+            if (is_current === true) {
+                pointer_box.innerHTML = '<svg xmlns = "http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
+
+            }
+            node.appendChild(pointer_box);
+
+            let name_node = document.createElement('div');
+            name_node.style.width = "10em";
+            name_node.style.textOverflow = "ellipsis";
+            name_node.style.overflow = "hidden";
+            name_node.style.whiteSpace = "nowrap";
+            name_node.style.marginRight = "0.5em";
+            name_node.appendChild(document.createTextNode(
+                individual.skip
+                    ? individual.name
+                    : `${individual.action}. ${individual.name}`
+            ));
+            node.appendChild(name_node);
+
+            node.appendChild(document.createTextNode("H:"));
+
+            let health_input = document.createElement('input');
+            health_input.className = "individual-sim-input";
+            health_input.type = "number";
+            health_input.value = individual.health;
+            health_input.style.fontSize = "0.8em";
+            health_input.style.marginRight = "0.65em";
+            health_input.style.marginLeft = "0.1em";
+            health_input.addEventListener('change', (event) => {
+                individual.health = Number(event.target.value);
+                render_sim();
+            });
+            if (individual.action === 2) {
+                health_input.disabled = true;
+            }
+            node.appendChild(health_input);
+
+            node.appendChild(document.createTextNode("I:"));
+
+            let initiative_input = document.createElement('input');
+            initiative_input.className = "individual-sim-input";
+            initiative_input.type = "number";
+            initiative_input.style.fontSize = "0.8em";
+            initiative_input.value = individual.initiative;
+            initiative_input.style.margin = "0 0.65em 0 0.1em";
+            initiative_input.addEventListener('change', (event) => {
+                individual.initiative = Number(event.target.value);
+                render_sim();
+            });
+            if (individual.action === 2) {
+                initiative_input.disabled = true;
+            }
+            node.appendChild(initiative_input);
+
+            if (individual.action === 1) {
+                node.appendChild(make_effect_select(individual));
+                node.appendChild(make_skip(individual));
+            }
 
             return node;
         }
