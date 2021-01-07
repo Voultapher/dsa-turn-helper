@@ -101,6 +101,10 @@
             width: 3em;
         }
 
+        .individual-sim-name {
+            width: 10em;
+        }
+
         /* Responsive layout - makes a one column-layout instead of two-column layout */
         @media (max-width: 88rem) {
             body {
@@ -137,6 +141,15 @@
 
             .individual-sim-input {
                 width: 2em;
+            }
+
+            .individual-sim-name {
+                width: 5em;
+            }
+
+            .individual-skip-label {
+                width: 0em;
+                visibility: hidden;
             }
         }
 
@@ -458,7 +471,6 @@
             return {
                 uuid: action_1_individual.uuid,
                 name: action_1_individual.name,
-                health: action_1_individual.health,
                 initiative: action_1_individual.initiative - 8,
                 action: 2,
                 color: action_1_individual.color,
@@ -514,6 +526,7 @@
 
                     sim_individual.color = light_color;
                     sim_individual.uuid = uuidv4();
+                    sim_individual.ini_change = 0;
                     return sim_individual;
                 }));
             }).flat();
@@ -558,8 +571,6 @@
                 sim.rounds[round_cursor] = {
                     turns: [JSON.parse(JSON.stringify(last_active_turn))]
                 };
-
-                view_type = 'New Round';
             }
 
             round = sim.rounds[round_cursor];
@@ -570,17 +581,6 @@
                 // TODO check that at least one individual is still active.
                 // Or disable the skip box once only one remains.
                 round.turns.push(JSON.parse(JSON.stringify(sim.last_active_turn)));
-
-                if (view_type === '') {
-                    view_type = 'New Turn';
-                }
-            }
-
-            if (round_cursor === 0 && turn_cursor === 0) {
-                view_type = 'Start';
-            }
-            else if (view_type === '') {
-                view_type = 'History';
             }
 
             // Chaning initiative can have an effect on the action split.
@@ -600,9 +600,6 @@
             let new_sim_box_node = document.createElement("div");
             new_sim_box_node.id = "turn-view";
 
-            new_sim_box_node.appendChild(make_sim_toolbar(round_cursor, turn_cursor, view_type));
-            new_sim_box_node.appendChild(document.createElement('hr'));
-
             let sorted_individuals = individuals.sort((a, b) => {
                 // Second action of faster individual comes before equally
                 // fast first action.
@@ -616,9 +613,29 @@
             let skipped_individuals = sorted_individuals.filter(x => x.skip);
             let active_individuals = sorted_individuals.filter(x => !x.skip);
 
+            const is_latest_round = (round_cursor + 1) === sim.rounds.length;
+            const is_latest_turn = (turn_cursor + 1) === round.turns.length;
+
+            if (is_latest_round && round.turns.length === 1) {
+                if (round_cursor === 0 && turn_cursor === 0) {
+                    view_type = 'Start';
+                } else {
+                    view_type = 'New Round';
+                }
+            } else if (is_latest_turn) {
+                view_type = 'New Turn';
+            } else {
+                view_type = 'History';
+            }
+
+            const is_history = view_type === 'History';
+
+            new_sim_box_node.appendChild(make_sim_toolbar(round_cursor, turn_cursor, view_type));
+            new_sim_box_node.appendChild(document.createElement('hr'));
+
             active_individuals.map((individual, i) => {
                 new_sim_box_node.appendChild(
-                    make_sim_individual(individual.color, individual, i === turn_cursor)
+                    make_sim_individual(individual.color, individual, i === turn_cursor, is_history)
                 );
             });
 
@@ -724,14 +741,14 @@
         function make_effect_select(individual) {
             let effect_select = document.createElement('select');
             effect_select.style.margin = '0';
-            effect_select.style.fontSize = '0.625em';
-            effect_select.style.width = '8.5em';
+            effect_select.style.fontSize = '0.8em';
+            effect_select.style.width = '4.5em';
 
             let select_placeholder = document.createElement('option');
             select_placeholder.disabled = true;
             select_placeholder.selected = true;
             select_placeholder.hidden = true;
-            select_placeholder.appendChild(document.createTextNode('choose effect'));
+            select_placeholder.appendChild(document.createTextNode('effect'));
             effect_select.appendChild(select_placeholder);
 
             effect_select.appendChild(make_select_option('Wunde erlitten'));
@@ -739,33 +756,37 @@
             effect_select.appendChild(make_select_option('Gezielt ausgewichen Misserfolg'));
             effect_select.appendChild(make_select_option('Passierschlag erlitten'));
             effect_select.appendChild(make_select_option('Orientieren'));
+            effect_select.appendChild(make_select_option('Manuell'));
 
             effect_select.addEventListener('change', (event) => {
                 switch (effect_select.value) {
                     case 'Wunde erlitten':
-                        individual.initiative -= 2;
+                        individual.ini_change -= 2;
                         individual.wunden += 1;
                         break;
                     case 'Frei ausgewichen':
-                        individual.initiative -= 4;
+                        individual.ini_change -= 4;
                         individual.reversible_negatie_effects += 4;
                         break;
                     case 'Gezielt ausgewichen Misserfolg':
-                        individual.initiative -= 2;
+                        individual.ini_change -= 2;
                         individual.reversible_negatie_effects += 2;
                         break;
                     case 'Passierschlag erlitten':
                         let d_val = roll_d6();
-                        individual.initiative -= d_val;
+                        individual.ini_change -= d_val;
                         individual.reversible_negatie_effects += d_val;
                         break;
                     case 'Orientieren':
                         if (individual.reversible_negatie_effects !== undefined) {
-                            individual.initiative += individual.reversible_negatie_effects;
+                            individual.ini_change += individual.reversible_negatie_effects;
                         }
                         // TODO
-                        // individual.initiative += (6 - individual.initial_init_roll);
+                        // individual.ini_change += (6 - individual.initial_init_roll);
                         individual.reversible_negatie_effects = 0;
+                        break;
+                    case 'Manuell':
+                        individual.manual_ini_input = true;
                         break;
 
                     default:
@@ -787,6 +808,7 @@
             flex_box.style.margin = "0 0 0 auto";
 
             let skip_label = document.createElement('label');
+            skip_label.className = 'individual-skip-label';
             skip_label.for = "disable_checkbox";
             skip_label.textContent = "skip";
             skip_label.style.color = "#4F4F4F"
@@ -833,7 +855,24 @@
             return flex_box;
         }
 
-        function make_sim_individual(color, individual, is_current) {
+        function make_custom_initative_input(individual) {
+            let initiative_input = document.createElement('input');
+            // initiative_input.className = "individual-sim-input";
+            initiative_input.type = "number";
+            initiative_input.style.fontSize = "0.8em";
+            initiative_input.placeholder = 'INI add';
+            initiative_input.style.margin = "0 0.1em 0 0.65em";
+            initiative_input.style.width = "4.2em";
+            initiative_input.addEventListener('change', (event) => {
+                individual.ini_change += Number(event.target.value);
+                individual.manual_ini_input = false;
+                render_sim();
+            });
+
+            return initiative_input;
+        }
+
+        function make_sim_individual(color, individual, is_current, is_history) {
             let node = document.createElement('div');
             node.className = "individual";
             node.style.display = "flex";
@@ -853,7 +892,7 @@
             node.appendChild(pointer_box);
 
             let name_node = document.createElement('div');
-            name_node.style.width = "10em";
+            name_node.className = "individual-sim-name";
             name_node.style.textOverflow = "ellipsis";
             name_node.style.overflow = "hidden";
             name_node.style.whiteSpace = "nowrap";
@@ -861,9 +900,15 @@
             name_node.appendChild(document.createTextNode(
                 individual.skip
                     ? individual.name
-                    : `${individual.action}. ${individual.name}`
+                    : `${individual.action} ${individual.name}`
             ));
             node.appendChild(name_node);
+
+
+            if (individual.action !== 1) {
+                // Second actions are too noisy and confusing otherwise.
+                return node;
+            }
 
             node.appendChild(document.createTextNode("H:"));
 
@@ -878,30 +923,47 @@
                 individual.health = Number(event.target.value);
                 render_sim();
             });
-            if (individual.action === 2) {
+            if (is_history) {
                 health_input.disabled = true;
             }
             node.appendChild(health_input);
 
-            node.appendChild(document.createTextNode("I:"));
+            if (individual.manual_ini_input) {
+                node.appendChild(document.createTextNode('I:'));
+                node.appendChild(make_custom_initative_input(individual));
+            } else {
+                let initiative_val = document.createElement('div');
+                initiative_val.style.width = '2.6em';
 
-            let initiative_input = document.createElement('input');
-            initiative_input.className = "individual-sim-input";
-            initiative_input.type = "number";
-            initiative_input.style.fontSize = "0.8em";
-            initiative_input.value = individual.initiative;
-            initiative_input.style.margin = "0 0.65em 0 0.1em";
-            initiative_input.addEventListener('change', (event) => {
-                individual.initiative = Number(event.target.value);
-                render_sim();
-            });
-            if (individual.action === 2) {
-                initiative_input.disabled = true;
+                initiative_val.appendChild(document.createTextNode(
+                    `I: ${individual.initiative}`
+                ));
+                node.appendChild(initiative_val);
+
+                const ini_change = individual.ini_change;
+
+                let initiative_diff = document.createElement('div');
+                initiative_diff.style.width = '3em';
+                initiative_diff.style.display = "flex";
+                initiative_diff.style.alignItems = "center";
+
+                if (ini_change !== undefined && ini_change !== 0) {
+                    let arrow_box = document.createElement('div');
+                    arrow_box.style.width = '0.7em';
+                    arrow_box.style.height = '1em';
+                    arrow_box.style.margin = '0 0.3em 0 0';
+                    arrow_box.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 2 24 24" ><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 7.77L18.39 18H5.61L12 7.77M12 4L2 20h20L12 4z"/></svg>';
+                    initiative_diff.appendChild(arrow_box);
+                    initiative_diff.appendChild(document.createTextNode(ini_change));
+                }
+
+                node.appendChild(initiative_diff);
             }
-            node.appendChild(initiative_input);
 
-            if (individual.action === 1) {
-                node.appendChild(make_effect_select(individual));
+            if (!is_history) {
+                if (!individual.manual_ini_input) {
+                    node.appendChild(make_effect_select(individual));
+                }
                 node.appendChild(make_skip(individual));
             }
 
