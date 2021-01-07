@@ -190,8 +190,8 @@
             else return "#" + (4294967296 + r * 16777216 + g * 65536 + b * 256 + (f ? m(a * 255) : 0)).toString(16).slice(1, f ? undefined : -2)
         }
 
-        function d6_roll() {
-            return Math.floor(Math.random() * (1 - 1 + 10)) + 1;
+        function roll_d6() {
+            return Math.floor(Math.random() * (1 - 1 + 6)) + 1;
         }
 
         // --- Parties ---
@@ -269,7 +269,7 @@
             {
                 name: "Enemies", color: "#ff417e", individuals: [
                     { name: "Midlife-crisis Troll", health: 54, initiative: 7 },
-                    { name: "Echte Schlange", health: 6, initiative: 21 },
+                    { name: "Echte Schlange", health: 6, initiative: 25 },
                 ]
             },
         ];
@@ -496,7 +496,7 @@
                     individuals.push(make_action_2_individual(individual));
                 } else if (initiative > 0) {
                     individuals[action_2_idx].initiative = initiative - 8;
-                } else {
+                } else if (action_2_idx !== -1) {
                     individuals.splice(action_2_idx, 1);
                 }
             });
@@ -587,6 +587,12 @@
             // So apply it every time an update is made.
             update_action_split(round.turns[turn_cursor]);
 
+
+            // After the action split changed, the cursor might now dangle
+            // in nothing, move back if necessary.
+            // sim.cursor.turn = active_round_length(round.turns) - 1;
+            // turn_cursor = sim.cursor.turn;
+
             // Right now a turn only contains individuals, to make it easier
             // to read alias it under that name.
             let individuals = round.turns[turn_cursor];
@@ -597,8 +603,15 @@
             new_sim_box_node.appendChild(make_sim_toolbar(round_cursor, turn_cursor, view_type));
             new_sim_box_node.appendChild(document.createElement('hr'));
 
-            let sorted_individuals = individuals
-                .sort((a, b) => (b.initiative - a.initiative));
+            let sorted_individuals = individuals.sort((a, b) => {
+                // Second action of faster individual comes before equally
+                // fast first action.
+                if (a.initiative === b.initiative) {
+                    return a.action > b.action ? -1 : 1;
+                }
+
+                return b.initiative - a.initiative;
+            });
 
             let skipped_individuals = sorted_individuals.filter(x => x.skip);
             let active_individuals = sorted_individuals.filter(x => !x.skip);
@@ -712,6 +725,7 @@
             let effect_select = document.createElement('select');
             effect_select.style.margin = '0';
             effect_select.style.fontSize = '0.625em';
+            effect_select.style.width = '8.5em';
 
             let select_placeholder = document.createElement('option');
             select_placeholder.disabled = true;
@@ -720,20 +734,42 @@
             select_placeholder.appendChild(document.createTextNode('choose effect'));
             effect_select.appendChild(select_placeholder);
 
-            effect_select.appendChild(make_select_option('Wunde'));
-            effect_select.appendChild(make_select_option('Ausweichen'));
+            effect_select.appendChild(make_select_option('Wunde erlitten'));
+            effect_select.appendChild(make_select_option('Frei ausgewichen'));
+            effect_select.appendChild(make_select_option('Gezielt ausgewichen Misserfolg'));
+            effect_select.appendChild(make_select_option('Passierschlag erlitten'));
+            effect_select.appendChild(make_select_option('Orientieren'));
 
             effect_select.addEventListener('change', (event) => {
-                // switch (
                 switch (effect_select.value) {
-                    case 'Wunde':
-                        individual.initiative -= 4;
-                        break;
-                    case 'Ausweichen':
+                    case 'Wunde erlitten':
                         individual.initiative -= 2;
+                        individual.wunden += 1;
                         break;
+                    case 'Frei ausgewichen':
+                        individual.initiative -= 4;
+                        individual.reversible_negatie_effects += 4;
+                        break;
+                    case 'Gezielt ausgewichen Misserfolg':
+                        individual.initiative -= 2;
+                        individual.reversible_negatie_effects += 2;
+                        break;
+                    case 'Passierschlag erlitten':
+                        let d_val = roll_d6();
+                        individual.initiative -= d_val;
+                        individual.reversible_negatie_effects += d_val;
+                        break;
+                    case 'Orientieren':
+                        if (individual.reversible_negatie_effects !== undefined) {
+                            individual.initiative += individual.reversible_negatie_effects;
+                        }
+                        // TODO
+                        // individual.initiative += (6 - individual.initial_init_roll);
+                        individual.reversible_negatie_effects = 0;
+                        break;
+
                     default:
-                        conosle.error(`Unknown effect value: ${effect_select.value}`);
+                        console.error(`Unknown effect value: ${effect_select.value}`);
                 }
 
                 render_sim();
