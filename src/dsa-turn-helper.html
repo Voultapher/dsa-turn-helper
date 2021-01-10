@@ -22,7 +22,7 @@
             border: solid 1px black;
             border-radius: 0px;
 
-            padding: 0.3rem 0.7rem;
+            padding: 0.3em 0.7em;
 
             color: black;
             background-color: white;
@@ -103,6 +103,9 @@
 
         .individual-sim-name {
             width: 10em;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
         }
 
         /* Responsive layout - makes a one column-layout instead of two-column layout */
@@ -167,7 +170,7 @@
     </style>
 
     <script>
-        "use strict";
+        'use strict';
 
         // Util
 
@@ -180,33 +183,44 @@
 
         // Version 4.0
         const pSBC = (p, c0, c1, l) => {
-            let r, g, b, P, f, t, h, i = parseInt, m = Math.round, a = typeof (c1) == "string";
-            if (typeof (p) != "number" || p < -1 || p > 1 || typeof (c0) != "string" || (c0[0] != 'r' && c0[0] != '#') || (c1 && !a)) return null;
+            let r, g, b, P, f, t, h, i = parseInt, m = Math.round, a = typeof (c1) == 'string';
+            if (typeof (p) != 'number' || p < -1 || p > 1 || typeof (c0) != 'string' || (c0[0] != 'r' && c0[0] != '#') || (c1 && !a)) return null;
             if (!this.pSBCr) this.pSBCr = (d) => {
                 let n = d.length, x = {};
                 if (n > 9) {
-                    [r, g, b, a] = d = d.split(","), n = d.length;
+                    [r, g, b, a] = d = d.split(','), n = d.length;
                     if (n < 3 || n > 4) return null;
-                    x.r = i(r[3] == "a" ? r.slice(5) : r.slice(4)), x.g = i(g), x.b = i(b), x.a = a ? parseFloat(a) : -1
+                    x.r = i(r[3] == 'a' ? r.slice(5) : r.slice(4)), x.g = i(g), x.b = i(b), x.a = a ? parseFloat(a) : -1
                 } else {
                     if (n == 8 || n == 6 || n < 4) return null;
-                    if (n < 6) d = "#" + d[1] + d[1] + d[2] + d[2] + d[3] + d[3] + (n > 4 ? d[4] + d[4] : "");
+                    if (n < 6) d = '#' + d[1] + d[1] + d[2] + d[2] + d[3] + d[3] + (n > 4 ? d[4] + d[4] : '');
                     d = i(d.slice(1), 16);
                     if (n == 9 || n == 5) x.r = d >> 24 & 255, x.g = d >> 16 & 255, x.b = d >> 8 & 255, x.a = m((d & 255) / 0.255) / 1000;
                     else x.r = d >> 16, x.g = d >> 8 & 255, x.b = d & 255, x.a = -1
                 } return x
             };
-            h = c0.length > 9, h = a ? c1.length > 9 ? true : c1 == "c" ? !h : false : h, f = this.pSBCr(c0), P = p < 0, t = c1 && c1 != "c" ? this.pSBCr(c1) : P ? { r: 0, g: 0, b: 0, a: -1 } : { r: 255, g: 255, b: 255, a: -1 }, p = P ? p * -1 : p, P = 1 - p;
+            h = c0.length > 9, h = a ? c1.length > 9 ? true : c1 == 'c' ? !h : false : h, f = this.pSBCr(c0), P = p < 0, t = c1 && c1 != 'c' ? this.pSBCr(c1) : P ? { r: 0, g: 0, b: 0, a: -1 } : { r: 255, g: 255, b: 255, a: -1 }, p = P ? p * -1 : p, P = 1 - p;
             if (!f || !t) return null;
             if (l) r = m(P * f.r + p * t.r), g = m(P * f.g + p * t.g), b = m(P * f.b + p * t.b);
             else r = m((P * f.r ** 2 + p * t.r ** 2) ** 0.5), g = m((P * f.g ** 2 + p * t.g ** 2) ** 0.5), b = m((P * f.b ** 2 + p * t.b ** 2) ** 0.5);
             a = f.a, t = t.a, f = a >= 0 || t >= 0, a = f ? a < 0 ? t : t < 0 ? a : a * P + t * p : 0;
-            if (h) return "rgb" + (f ? "a(" : "(") + r + "," + g + "," + b + (f ? "," + m(a * 1000) / 1000 : "") + ")";
-            else return "#" + (4294967296 + r * 16777216 + g * 65536 + b * 256 + (f ? m(a * 255) : 0)).toString(16).slice(1, f ? undefined : -2)
+            if (h) return 'rgb' + (f ? 'a(' : '(') + r + ',' + g + ',' + b + (f ? ',' + m(a * 1000) / 1000 : '') + ')';
+            else return '#' + (4294967296 + r * 16777216 + g * 65536 + b * 256 + (f ? m(a * 255) : 0)).toString(16).slice(1, f ? undefined : -2)
         }
 
         function roll_d6() {
-            return Math.floor(Math.random() * (1 - 1 + 6)) + 1;
+            let array = new Uint32Array(1);
+            window.crypto.getRandomValues(array);
+            // Yes this is slightly wrong, and not a uniform random distribution.
+            return (array[0] % 6) + 1;
+
+            // return Math.floor(Math.random() * (1 - 1 + 6)) + 1;
+        }
+
+        function val_or_0(val) {
+            return val === undefined
+                ? 0
+                : val;
         }
 
         // --- Parties ---
@@ -222,13 +236,13 @@
         });
 
         function add_party() {
-            let name = document.getElementById("party-name").value;
+            let name = document.getElementById('party-name').value;
 
-            if (name === "") {
-                name = "Die Namenlosen"
+            if (name === '') {
+                name = 'Die Namenlosen'
             }
 
-            let color = document.getElementById("party-color").value;
+            let color = document.getElementById('party-color').value;
             let individuals = [];
 
             parties.push({ name, color, individuals });
@@ -275,16 +289,16 @@
         // Fill with usable demo.
         let parties = [
             {
-                name: "Players", color: "#5591ff", individuals: [
-                    { name: "Gubo Der Weise", health: 33, initiative: 12 },
-                    { name: "Bratna die Schnelle", health: 10, initiative: 1 },
-                    { name: "Anoyah die Schlaue", health: 27, initiative: 17 },
+                name: 'Players', color: '#5591ff', individuals: [
+                    { name: 'Gubo Der Weise', health: 33, initiative: 12 },
+                    { name: 'Bratna die Schnelle', health: 10, initiative: 1 },
+                    { name: 'Anoyah die Schlaue', health: 27, initiative: 17 },
                 ]
             },
             {
-                name: "Enemies", color: "#ff417e", individuals: [
-                    { name: "Midlife-crisis Troll", health: 54, initiative: 7 },
-                    { name: "Echte Schlange", health: 6, initiative: 25 },
+                name: 'Enemies', color: '#ff417e', individuals: [
+                    { name: 'Midlife-crisis Troll', health: 54, initiative: 7 },
+                    { name: 'Echte Schlange', health: 6, initiative: 25 },
                 ]
             },
         ];
@@ -294,10 +308,10 @@
         //
         // Kind of a poor mans React.
         function render_parties() {
-            // console.debug("render_parties was called", JSON.stringify(parties));
+            // console.debug('render_parties was called', JSON.stringify(parties));
 
-            let new_parties_node = document.createElement("div");
-            new_parties_node.id = "parties";
+            let new_parties_node = document.createElement('div');
+            new_parties_node.id = 'parties';
 
             parties.map((party, party_id) => {
                 new_parties_node.appendChild(
@@ -305,13 +319,13 @@
                 );
             });
 
-            let parties_node = document.getElementById("parties");
+            let parties_node = document.getElementById('parties');
             parties_node.replaceWith(new_parties_node);
         }
 
         function make_party(party, party_id) {
             let node = document.createElement('div');
-            node.className = "party";
+            node.className = 'party';
 
             node.appendChild(make_party_toolbar(party, party_id));
 
@@ -323,7 +337,7 @@
                 node.appendChild(make_individual(color, individual, party_id, i));
             });
 
-            node.style.marginBottom = "0.625em";
+            node.style.marginBottom = '0.625em';
 
             return node;
         }
@@ -340,45 +354,45 @@
 
         function make_party_toolbar(party, party_id) {
             let node = document.createElement('div');
-            node.className = "party-toolbar";
+            node.className = 'party-toolbar';
             node.style.backgroundColor = party.color;
-            node.style.display = "flex";
+            node.style.display = 'flex';
 
             node.appendChild(document.createTextNode(party.name));
 
             let flex_box = document.createElement('div');
-            flex_box.style.display = "flex";
-            flex_box.style.justifyContent = "flex-end";
-            flex_box.style.marginLeft = "auto";
+            flex_box.style.display = 'flex';
+            flex_box.style.justifyContent = 'flex-end';
+            flex_box.style.marginLeft = 'auto';
 
             let name_input = document.createElement('input');
-            name_input.type = "text";
-            name_input.className = "individual-name-input";
-            name_input.placeholder = "Name";
-            add_input_restore(name_input, "name_input", party, party_id);
+            name_input.type = 'text';
+            name_input.className = 'individual-name-input';
+            name_input.placeholder = 'Name';
+            add_input_restore(name_input, 'name_input', party, party_id);
             flex_box.appendChild(name_input);
 
             let health_input = document.createElement('input');
-            health_input.className = "inidividual-num-input";
-            health_input.type = "number";
-            health_input.placeholder = "Health";
-            add_input_restore(health_input, "health_input", party, party_id);
+            health_input.className = 'inidividual-num-input';
+            health_input.type = 'number';
+            health_input.placeholder = 'Health';
+            add_input_restore(health_input, 'health_input', party, party_id);
             flex_box.appendChild(health_input);
 
             let initiative_input = document.createElement('input');
-            initiative_input.className = "inidividual-num-input";
-            initiative_input.type = "number";
-            initiative_input.placeholder = "INI Base";
-            add_input_restore(initiative_input, "initiative_input", party, party_id);
+            initiative_input.className = 'inidividual-num-input';
+            initiative_input.type = 'number';
+            initiative_input.placeholder = 'INI Base';
+            add_input_restore(initiative_input, 'initiative_input', party, party_id);
             flex_box.appendChild(initiative_input);
 
             let add_btn = document.createElement('button');
-            add_btn.textContent = "Add";
-            add_btn.style.margin = "0 0 0 0.3em";
+            add_btn.textContent = 'Add';
+            add_btn.style.margin = '0 0 0 0.3em';
             add_btn.addEventListener('click', (event) => {
                 let name = name_input.value;
 
-                if (name === "") {
+                if (name === '') {
                     switch (Math.floor(Math.random() * 3)) {
                         case 0:
                             name = 'Die Namenlose';
@@ -401,8 +415,8 @@
             flex_box.appendChild(add_btn);
 
             let delete_btn = document.createElement('button');
-            delete_btn.textContent = "Delete Party";
-            delete_btn.style.margin = "0 0 0 2.3em";
+            delete_btn.textContent = 'Delete Party';
+            delete_btn.style.margin = '0 0 0 2.3em';
             delete_btn.addEventListener('click', (event) => {
                 parties.splice(party_id, 1);
                 render_parties();
@@ -417,43 +431,43 @@
         // individual {name: str, health: num, initiative: num}
         function make_individual(color, individual, party_id, id) {
             let node = document.createElement('div');
-            node.className = "individual";
-            node.style.display = "flex";
-            node.style.flexDirection = "row";
+            node.className = 'individual';
+            node.style.display = 'flex';
+            node.style.flexDirection = 'row';
             node.style.backgroundColor = color;
 
             let name_node = document.createElement('div');
-            name_node.style.width = "10em";
-            name_node.style.textOverflow = "ellipsis";
-            name_node.style.overflow = "hidden";
-            name_node.style.whiteSpace = "nowrap";
-            name_node.style.marginRight = "0.5em";
+            name_node.style.width = '10em';
+            name_node.style.textOverflow = 'ellipsis';
+            name_node.style.overflow = 'hidden';
+            name_node.style.whiteSpace = 'nowrap';
+            name_node.style.marginRight = '0.5em';
             name_node.appendChild(document.createTextNode(individual.name));
             node.appendChild(name_node);
 
             let health_node = document.createElement('div');
-            health_node.style.marginRight = "0.65em";
-            health_node.style.width = "3.5em";
+            health_node.style.marginRight = '0.65em';
+            health_node.style.width = '3.5em';
             health_node.appendChild(document.createTextNode(`H: ${individual.health}`));
             node.appendChild(health_node);
 
             let initiative_node = document.createElement('div');
-            // initiative_node.style.marginRight = "1em";
-            initiative_node.style.width = "3.5em";
+            // initiative_node.style.marginRight = '1em';
+            initiative_node.style.width = '3.5em';
             initiative_node.appendChild(document.createTextNode(`I: ${individual.initiative}`));
             node.appendChild(initiative_node);
 
             let flex_box = document.createElement('div');
-            flex_box.style.display = "flex";
-            flex_box.style.flexDirection = "row";
-            flex_box.style.justifyContent = "flex-end";
-            flex_box.style.alignItems = "center";
-            flex_box.style.margin = "0 0 0 auto";
+            flex_box.style.display = 'flex';
+            flex_box.style.flexDirection = 'row';
+            flex_box.style.justifyContent = 'flex-end';
+            flex_box.style.alignItems = 'center';
+            flex_box.style.margin = '0 0 0 auto';
 
             let delete_btn = document.createElement('button');
-            delete_btn.textContent = "Delete";
-            delete_btn.style.marginRight = "0";
-            delete_btn.style.fontSize = "0.625em";
+            delete_btn.textContent = 'Delete';
+            delete_btn.style.marginRight = '0';
+            delete_btn.style.fontSize = '0.625em';
             delete_btn.addEventListener('click', (event) => {
                 parties[party_id].individuals.splice(id, 1);
                 render_parties();
@@ -522,7 +536,7 @@
                 // base color was less confusing in the simulation.
                 let light_color = pSBC(0.78, party.color);
 
-                return make_action_split(party.individuals.map((individual, i) => {
+                return party.individuals.map((individual, i) => {
                     // deep copy
                     let sim_individual = JSON.parse(JSON.stringify(individual));
 
@@ -530,29 +544,89 @@
                     sim_individual.uuid = uuidv4();
                     sim_individual.ini_change = 0;
                     return sim_individual;
-                }));
+                });
             }).flat();
 
             if (individuals.length < 1) {
-                alert("Simulating no-one breaks the universe! Don't do that.");
+                alert('Simulating no-one breaks the universe! Don\'t do that.');
                 return;
             }
 
-            sim = {
-                cursor: {
-                    round: 0,
-                    turn: 0,
-                },
-                rounds: [make_new_round({
-                    turns: [individuals],
-                    skipped_individuals: [],
-                    to_be_skipped_individuals: []
-                })],
+            make_ini_collection(individuals);
+        }
+
+        function make_ini_collection(individuals) {
+            let new_sim_box_node = document.createElement('div');
+            new_sim_box_node.id = 'turn-view';
+
+            let on_start = (change) => {
+                sim = {
+                    cursor: {
+                        round: 0,
+                        turn: 0,
+                    },
+                    rounds: [make_new_round({
+                        turns: [make_action_split(individuals)],
+                        skipped_individuals: [],
+                        to_be_skipped_individuals: []
+                    })],
+                };
+
+                sim.last_active_turn = sim.rounds[sim.cursor.round].turns[sim.cursor.turn];
+
+                render_sim();
             };
 
-            sim.last_active_turn = sim.rounds[sim.cursor.round].turns[sim.cursor.turn];
+            let action_node = document.createElement('div');
 
-            render_sim();
+            let auto_roll_btn = document.createElement('button');
+            auto_roll_btn.textContent = 'Auto Roll';
+            auto_roll_btn.style.height = '2.2em';
+            auto_roll_btn.addEventListener('click', (change) => {
+                individuals.forEach(individual => {
+                    individual.initial_ini_roll = roll_d6();
+                });
+
+                on_start();
+            });
+            action_node.appendChild(auto_roll_btn);
+
+            let sim_start_btn = document.createElement('button');
+            sim_start_btn.textContent = 'Start';
+            sim_start_btn.style.height = '2.2em';
+            sim_start_btn.addEventListener('click', on_start);
+            action_node.appendChild(sim_start_btn);
+
+            new_sim_box_node.appendChild(make_sim_toolbar(
+                0,
+                -1,
+                'INI Roll',
+                action_node
+            ));
+            new_sim_box_node.appendChild(document.createElement('hr'));
+
+            individuals.forEach(individual => {
+                let node = document.createElement('div');
+                node.className = 'individual';
+                node.style.backgroundColor = individual.color;
+
+                let name_box = document.createElement('div');
+                name_box.className = 'individual-sim-name';
+                // name_box.style.marginLeft = '1.15em';
+                name_box.appendChild(document.createTextNode(individual.name));
+                node.appendChild(name_box);
+
+                let ini_input = make_custom_initative_input(individual, (event) => {
+                    individual.initial_ini_roll = Number(event.target.value);
+                });
+
+                node.appendChild(ini_input);
+
+                new_sim_box_node.appendChild(node);
+            });
+
+            let sim_box_node = document.getElementById('turn-view');
+            sim_box_node.replaceWith(new_sim_box_node);
         }
 
         function make_new_round(last_round) {
@@ -571,13 +645,9 @@
             let new_round_individuals = last_turn
                 .filter(individual => to_be_skipped_uuids[individual.uuid] !== true)
                 .map(individual => {
-                    const ini_change = individual.ini_change === undefined
-                        ? 0
-                        : individual.ini_change;
-
-                    const rev_neg = individual.reversible_negatie_effects === undefined
-                        ? 0
-                        : individual.reversible_negatie_effects;
+                    const ini_change = val_or_0(individual.ini_change);
+                    const reversible_negatie_effects = val_or_0(individual.reversible_negatie_effects);
+                    const initial_ini_roll = val_or_0(individual.initial_ini_roll);
 
                     return {
                         name: individual.name,
@@ -586,8 +656,10 @@
                         initiative: individual.initiative + ini_change,
                         action: individual.action,
                         color: individual.color,
-                        reversible_negatie_effects: rev_neg,
                         wounds: individual.wounds,
+                        base_ini_maxed: individual.base_ini_maxed,
+                        reversible_negatie_effects,
+                        initial_ini_roll,
                         ini_change: 0,
                     };
                 });
@@ -613,7 +685,7 @@
         }
 
         function render_sim() {
-            // console.debug("render_sim was called", JSON.stringify(sim));
+            // console.debug('render_sim was called', JSON.stringify(sim));
 
             let { round: round_cursor, turn: turn_cursor } = sim.cursor;
 
@@ -642,8 +714,8 @@
             // to read alias it under that name.
             let individuals = round.turns[turn_cursor];
 
-            let new_sim_box_node = document.createElement("div");
-            new_sim_box_node.id = "turn-view";
+            let new_sim_box_node = document.createElement('div');
+            new_sim_box_node.id = 'turn-view';
 
             const is_latest_round = (round_cursor + 1) === sim.rounds.length;
             const is_latest_turn = (turn_cursor + 1) === round.turns.length;
@@ -662,10 +734,17 @@
 
             const is_history = view_type === 'History';
 
-            new_sim_box_node.appendChild(make_sim_toolbar(round_cursor, turn_cursor, view_type));
+            let cursor_buttons = make_cursor_buttons();
+
+            new_sim_box_node.appendChild(make_sim_toolbar(
+                round_cursor,
+                turn_cursor,
+                view_type,
+                cursor_buttons
+            ));
             new_sim_box_node.appendChild(document.createElement('hr'));
 
-            individuals.map((individual, i) => {
+            individuals.forEach((individual, i) => {
                 new_sim_box_node.appendChild(
                     make_sim_individual(individual.color, individual, i === turn_cursor, is_history)
                 );
@@ -674,33 +753,23 @@
             if (round.skipped_individuals.length > 0) {
                 new_sim_box_node.appendChild(document.createElement('hr'));
 
-                round.skipped_individuals.map(name => {
+                round.skipped_individuals.forEach(name => {
                     new_sim_box_node.appendChild(make_sim_skip_individual(name));
                 });
             }
 
-            let sim_box_node = document.getElementById("turn-view");
+            let sim_box_node = document.getElementById('turn-view');
             sim_box_node.replaceWith(new_sim_box_node);
         }
 
-        function make_sim_toolbar(round, turn, view_type) {
+        function make_cursor_buttons() {
             let node = document.createElement('div');
-            node.style.display = "flex";
-            node.style.flexDirection = "row";
-            node.style.alignItems = "center";
-
-            let turn_div = document.createElement('div');
-            turn_div.style.width = '10em';
-            turn_div.appendChild(document.createTextNode(
-                `Turn: ${round + 1}.${turn + 1} - ${view_type}`
-            ));
-            node.appendChild(turn_div);
 
             let previous_btn = document.createElement('button');
             previous_btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>';
-            previous_btn.style.margin = "0 0 0 0.625em";
-            previous_btn.style.lineHeight = "0";
-            previous_btn.style.width = "3em";
+            previous_btn.style.margin = '0 0 0 0.625em';
+            previous_btn.style.lineHeight = '0';
+            previous_btn.style.width = '3em';
             previous_btn.addEventListener('click', (event) => {
                 sim.cursor.turn -= 1;
 
@@ -722,9 +791,9 @@
 
             let next_btn = document.createElement('button');
             next_btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg"  viewBox="0 0 24 24"  ><path d="M0 0h24v24H0z" fill="none"/><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
-            next_btn.style.margin = "0 0.625em 0 0";
-            next_btn.style.lineHeight = "0";
-            next_btn.style.width = "3em";
+            next_btn.style.margin = '0 0.625em 0 0';
+            next_btn.style.lineHeight = '0';
+            next_btn.style.width = '3em';
             next_btn.addEventListener('click', (event) => {
                 // Round length is fixed within one round.
                 let last_active_turn = sim.rounds[sim.cursor.round].turns[sim.cursor.turn];
@@ -742,10 +811,29 @@
             });
             node.appendChild(next_btn);
 
+            return node;
+        }
+
+        function make_sim_toolbar(round, turn, view_type, action_node) {
+            let node = document.createElement('div');
+            node.style.display = 'flex';
+            node.style.flexDirection = 'row';
+            node.style.alignItems = 'center';
+
+            let turn_div = document.createElement('div');
+            turn_div.style.width = '10em';
+            turn_div.appendChild(document.createTextNode(
+                `Turn: ${round + 1}.${turn + 1} - ${view_type}`
+            ));
+            node.appendChild(turn_div);
+
+            node.appendChild(action_node);
+
             let new_btn = document.createElement('button');
-            new_btn.textContent = "All New";
-            new_btn.style.margin = "0 0 0 auto";
-            new_btn.style.height = "2.2em";
+            new_btn.textContent = 'All New';
+            new_btn.style.margin = '0 0 0 auto';
+            new_btn.style.width = '5em';
+            new_btn.style.height = '2.2em';
             new_btn.addEventListener('click', init_sim);
             node.appendChild(new_btn);
 
@@ -802,8 +890,10 @@
                         if (individual.reversible_negatie_effects !== undefined) {
                             individual.ini_change += individual.reversible_negatie_effects;
                         }
-                        // TODO
-                        // individual.ini_change += (6 - individual.initial_init_roll);
+                        if (individual.base_ini_maxed !== true) {
+                            individual.ini_change += (6 - individual.initial_ini_roll);
+                            individual.base_ini_maxed = true;
+                        }
                         individual.reversible_negatie_effects = 0;
                         break;
                     case 'Manuell':
@@ -822,25 +912,25 @@
 
         function make_skip(individual) {
             let flex_box = document.createElement('div');
-            flex_box.style.display = "flex";
-            flex_box.style.flexDirection = "row";
-            flex_box.style.justifyContent = "flex-end";
-            flex_box.style.alignItems = "center";
-            flex_box.style.margin = "0 0 0 auto";
+            flex_box.style.display = 'flex';
+            flex_box.style.flexDirection = 'row';
+            flex_box.style.justifyContent = 'flex-end';
+            flex_box.style.alignItems = 'center';
+            flex_box.style.margin = '0 0 0 auto';
 
             let skip_label = document.createElement('label');
             skip_label.className = 'individual-skip-label';
-            skip_label.for = "disable_checkbox";
-            skip_label.textContent = "skip";
-            skip_label.style.color = "#4F4F4F"
+            skip_label.for = 'disable_checkbox';
+            skip_label.textContent = 'skip';
+            skip_label.style.color = '#4F4F4F'
             flex_box.appendChild(skip_label);
 
             let disable_checkbox = document.createElement('input');
-            disable_checkbox.type = "checkbox";
-            disable_checkbox.name = "disable_checkbox";
-            disable_checkbox.style.margin = "0 0.8em";
-            disable_checkbox.style.width = "2em";
-            disable_checkbox.style.height = "2em";
+            disable_checkbox.type = 'checkbox';
+            disable_checkbox.name = 'disable_checkbox';
+            disable_checkbox.style.margin = '0 0.8em';
+            disable_checkbox.style.width = '2em';
+            disable_checkbox.style.height = '2em';
             disable_checkbox.checked = individual.skip;
             disable_checkbox.addEventListener('click', (event) => {
                 individual.skip = disable_checkbox.checked;
@@ -858,33 +948,28 @@
             return flex_box;
         }
 
-        function make_custom_initative_input(individual) {
+        function make_custom_initative_input(individual, on_change) {
             let initiative_input = document.createElement('input');
-            // initiative_input.className = "individual-sim-input";
-            initiative_input.type = "number";
-            initiative_input.style.fontSize = "0.8em";
+            initiative_input.type = 'number';
+            initiative_input.style.fontSize = '0.8em';
             initiative_input.placeholder = 'INI add';
-            initiative_input.style.margin = "0 0.1em 0 0.65em";
-            initiative_input.style.width = "4.2em";
-            initiative_input.addEventListener('change', (event) => {
-                individual.ini_change += Number(event.target.value);
-                individual.manual_ini_input = false;
-                render_sim();
-            });
+            initiative_input.style.margin = '0 0.1em 0 0.65em';
+            initiative_input.style.width = '4.2em';
+            initiative_input.addEventListener('change', on_change);
 
             return initiative_input;
         }
 
         function make_sim_skip_individual(name) {
             let node = document.createElement('div');
-            node.className = "individual";
-            node.style.backgroundColor = "#eae8e8";
+            node.className = 'individual';
+            node.style.backgroundColor = '#eae8e8';
 
             // Keep style uniform.
             let pointer_box = document.createElement('div');
-            pointer_box.style.width = "1em";
-            pointer_box.style.height = "1em";
-            pointer_box.style.padding = "0.14em";
+            pointer_box.style.width = '1em';
+            pointer_box.style.height = '1em';
+            pointer_box.style.padding = '0.14em';
             node.appendChild(pointer_box);
 
             node.appendChild(document.createTextNode(name));
@@ -894,26 +979,23 @@
 
         function make_sim_individual(color, individual, is_current, is_history) {
             let node = document.createElement('div');
-            node.className = "individual";
+            node.className = 'individual';
             node.style.backgroundColor = color;
 
             let pointer_box = document.createElement('div');
-            pointer_box.style.width = "1em";
-            pointer_box.style.height = "1em";
-            pointer_box.style.padding = "0.14em";
+            pointer_box.style.width = '1em';
+            pointer_box.style.height = '1em';
+            pointer_box.style.padding = '0.14em';
 
             if (is_current === true) {
-                pointer_box.innerHTML = '<svg xmlns = "http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
+                pointer_box.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
 
             }
             node.appendChild(pointer_box);
 
             let name_node = document.createElement('div');
-            name_node.className = "individual-sim-name";
-            name_node.style.textOverflow = "ellipsis";
-            name_node.style.overflow = "hidden";
-            name_node.style.whiteSpace = "nowrap";
-            name_node.style.marginRight = "0.5em";
+            name_node.className = 'individual-sim-name';
+            name_node.style.marginRight = '0.5em';
             name_node.appendChild(document.createTextNode(
                 `${individual.action} ${individual.name}`
             ));
@@ -925,15 +1007,15 @@
                 return node;
             }
 
-            node.appendChild(document.createTextNode("H:"));
+            node.appendChild(document.createTextNode('H:'));
 
             let health_input = document.createElement('input');
-            health_input.className = "individual-sim-input";
-            health_input.type = "number";
+            health_input.className = 'individual-sim-input';
+            health_input.type = 'number';
             health_input.value = individual.health;
-            health_input.style.fontSize = "0.8em";
-            health_input.style.marginRight = "0.65em";
-            health_input.style.marginLeft = "0.1em";
+            health_input.style.fontSize = '0.8em';
+            health_input.style.marginRight = '0.65em';
+            health_input.style.marginLeft = '0.1em';
             health_input.addEventListener('change', (event) => {
                 individual.health = Number(event.target.value);
                 render_sim();
@@ -945,7 +1027,13 @@
 
             if (individual.manual_ini_input) {
                 node.appendChild(document.createTextNode('I:'));
-                node.appendChild(make_custom_initative_input(individual));
+                let ini_input = make_custom_initative_input(individual, (event) => {
+                    individual.ini_change += Number(event.target.value);
+                    individual.manual_ini_input = false;
+                    render_sim();
+                });
+
+                node.appendChild(ini_input);
             } else {
                 let initiative_val = document.createElement('div');
                 initiative_val.style.width = '2.6em';
@@ -959,8 +1047,8 @@
 
                 let initiative_diff = document.createElement('div');
                 initiative_diff.style.width = '3em';
-                initiative_diff.style.display = "flex";
-                initiative_diff.style.alignItems = "center";
+                initiative_diff.style.display = 'flex';
+                initiative_diff.style.alignItems = 'center';
 
                 if (ini_change !== undefined && ini_change !== 0) {
                     let arrow_box = document.createElement('div');
