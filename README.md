@@ -31,24 +31,33 @@ appropriate to the fight. Note you can prepare this ahead of time, as it does
 not require any fight specific information. Feel free to store and load this
 with the 'Load' and 'Download' buttons.
 
-Then once the parties are assembled click on 'New' in the turn simulation Area.
+Then once the parties are assembled click on 'All New' in the turn simulation Area.
 Changes you make now to the party section will only affect the turn simulation
-once you click 'New' again.
+once you click 'All New' again.
+
+Before the turn simulation can begin, you have the opportunity to enter
+initiative roll values for each participant. Once you have entered all the
+values you want, click on 'Start'. If a 'INI roll' input has never been changed,
+then a random d6 value is assigned for that participants initial initiative roll.
 
 Now that the simulation is set up properly, you'll notice it already sorted
-the participants by their base initiative. Use this first round to update
-their initiative to the value the players tell you, by simply entering the
-value in the field marked with 'I:'. Should multiple participants have the
-same initiative, feel free to differentiate them with non integer number,
-like 16.1, which is more than just 16. You are already in the first turn
+the participants by their base initiative. You are already in the first action
 of the battle. The cursor on the left of the participants name shows you
-who's turn it is currently. Play out the turn and adjust health and
-initiative values as they change in turn 1. Then step into the next turn,
-by clicking the button with the '>' symbol. Again play out the turn and
-update the health and initiative values, in the fields marked with
-'H:' and 'I:'. Repeat until the fight is over. You can go back any time
-and see how the values and initiative order changed over the course of
-turns and rounds.
+who's action it is currently. Play out the action and adjust health and
+initiative values as they change in action 1. Initiative can be changed by
+applying effects or by entering a manual value to add, negative numbers are
+subtracted. Then step into the next action, by clicking the button with the '>'
+symbol. Again play out the action and update the health and initiative values,
+in the fields marked with 'H:' and 'I:'. Repeat until the fight is over.
+You can go back any time and see how the values and initiative order changed
+over the course of turns and rounds. But the history is immutable.
+
+### Tips
+
+Should multiple participants have the
+same initiative, feel free to differentiate them with non integer number,
+like 16.1, which is more than just 16. By for example choosing effect 'Manual'
+and adding 0.1.
 
 ## Contributing
 
