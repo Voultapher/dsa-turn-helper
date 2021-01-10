@@ -48,7 +48,8 @@ initiative values as they change in action 1. Initiative can be changed by
 applying effects or by entering a manual value to add, negative numbers are
 subtracted. Then step into the next action, by clicking the button with the '>'
 symbol. Again play out the action and update the health and initiative values,
-in the fields marked with 'H:' and 'I:'. Repeat until the fight is over.
+in the fields marked with 'H:' and 'I:'. Initiative changes apply at the start
+of the next round. Repeat until the fight is over.
 You can go back any time and see how the values and initiative order changed
 over the course of turns and rounds. But the history is immutable.
 

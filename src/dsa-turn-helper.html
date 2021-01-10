@@ -602,6 +602,7 @@
             individuals.forEach(individual => {
                 let node = document.createElement('div');
                 node.className = 'individual';
+                node.style.height = '1.285em'; // Match sim style.
                 node.style.backgroundColor = individual.color;
 
                 let name_box = document.createElement('div');
