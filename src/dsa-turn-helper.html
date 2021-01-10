@@ -156,7 +156,9 @@
         .individual {
             font-size: 0.7em;
             margin: 0.2232em auto;
+            display: flex;
             align-items: center;
+            flex-direction: row;
         }
 
         .individual>div {
@@ -541,9 +543,11 @@
                     round: 0,
                     turn: 0,
                 },
-                rounds: [
-                    { turns: [individuals] }
-                ],
+                rounds: [make_new_round({
+                    turns: [individuals],
+                    skipped_individuals: [],
+                    to_be_skipped_individuals: []
+                })],
             };
 
             sim.last_active_turn = sim.rounds[sim.cursor.round].turns[sim.cursor.turn];
@@ -551,6 +555,62 @@
             render_sim();
         }
 
+        function make_new_round(last_round) {
+            let last_turn = last_round.turns[last_round.turns.length - 1];
+
+            let skipped_individuals = last_round.skipped_individuals.concat(
+                last_round.to_be_skipped_individuals.map(individual => individual.name)
+            );
+
+            let to_be_skipped_uuids = {};
+
+            last_round.to_be_skipped_individuals.forEach(individual => {
+                to_be_skipped_uuids[individual.uuid] = true;
+            });
+
+            let new_round_individuals = last_turn
+                .filter(individual => to_be_skipped_uuids[individual.uuid] !== true)
+                .map(individual => {
+                    const ini_change = individual.ini_change === undefined
+                        ? 0
+                        : individual.ini_change;
+
+                    const rev_neg = individual.reversible_negatie_effects === undefined
+                        ? 0
+                        : individual.reversible_negatie_effects;
+
+                    return {
+                        name: individual.name,
+                        health: individual.health,
+                        uuid: individual.uuid,
+                        initiative: individual.initiative + ini_change,
+                        action: individual.action,
+                        color: individual.color,
+                        reversible_negatie_effects: rev_neg,
+                        wounds: individual.wounds,
+                        ini_change: 0,
+                    };
+                });
+
+            update_action_split(new_round_individuals);
+
+            let new_turn = new_round_individuals
+                .sort((a, b) => {
+                    // Second action of faster individual comes before equally
+                    // fast first action.
+                    if (a.initiative === b.initiative) {
+                        return a.action > b.action ? -1 : 1;
+                    }
+
+                    return b.initiative - a.initiative;
+                });
+
+            return {
+                turns: [new_turn],
+                skipped_individuals,
+                to_be_skipped_individuals: [],
+            };
+        }
 
         function render_sim() {
             // console.debug("render_sim was called", JSON.stringify(sim));
@@ -564,13 +624,8 @@
             if (round === undefined) {
                 // Create new history entry if not been here before.
                 let last_round = sim.rounds[round_cursor - 1];
-                let last_active_turn = last_round.turns[
-                    active_round_length(last_round.turns[last_round.turns.length - 1]) - 1
-                ];
 
-                sim.rounds[round_cursor] = {
-                    turns: [JSON.parse(JSON.stringify(last_active_turn))]
-                };
+                sim.rounds[round_cursor] = make_new_round(last_round);
             }
 
             round = sim.rounds[round_cursor];
@@ -583,35 +638,12 @@
                 round.turns.push(JSON.parse(JSON.stringify(sim.last_active_turn)));
             }
 
-            // Chaning initiative can have an effect on the action split.
-            // So apply it every time an update is made.
-            update_action_split(round.turns[turn_cursor]);
-
-
-            // After the action split changed, the cursor might now dangle
-            // in nothing, move back if necessary.
-            // sim.cursor.turn = active_round_length(round.turns) - 1;
-            // turn_cursor = sim.cursor.turn;
-
             // Right now a turn only contains individuals, to make it easier
             // to read alias it under that name.
             let individuals = round.turns[turn_cursor];
 
             let new_sim_box_node = document.createElement("div");
             new_sim_box_node.id = "turn-view";
-
-            let sorted_individuals = individuals.sort((a, b) => {
-                // Second action of faster individual comes before equally
-                // fast first action.
-                if (a.initiative === b.initiative) {
-                    return a.action > b.action ? -1 : 1;
-                }
-
-                return b.initiative - a.initiative;
-            });
-
-            let skipped_individuals = sorted_individuals.filter(x => x.skip);
-            let active_individuals = sorted_individuals.filter(x => !x.skip);
 
             const is_latest_round = (round_cursor + 1) === sim.rounds.length;
             const is_latest_turn = (turn_cursor + 1) === round.turns.length;
@@ -622,7 +654,7 @@
                 } else {
                     view_type = 'New Round';
                 }
-            } else if (is_latest_turn) {
+            } else if (is_latest_round && is_latest_turn) {
                 view_type = 'New Turn';
             } else {
                 view_type = 'History';
@@ -633,29 +665,22 @@
             new_sim_box_node.appendChild(make_sim_toolbar(round_cursor, turn_cursor, view_type));
             new_sim_box_node.appendChild(document.createElement('hr'));
 
-            active_individuals.map((individual, i) => {
+            individuals.map((individual, i) => {
                 new_sim_box_node.appendChild(
                     make_sim_individual(individual.color, individual, i === turn_cursor, is_history)
                 );
             });
 
-            if (skipped_individuals.length > 0) {
+            if (round.skipped_individuals.length > 0) {
                 new_sim_box_node.appendChild(document.createElement('hr'));
 
-                skipped_individuals.map((individual, i) => {
-                    new_sim_box_node.appendChild(
-                        make_sim_individual("#eae8e8", individual, false)
-                    );
+                round.skipped_individuals.map(name => {
+                    new_sim_box_node.appendChild(make_sim_skip_individual(name));
                 });
             }
 
             let sim_box_node = document.getElementById("turn-view");
             sim_box_node.replaceWith(new_sim_box_node);
-        }
-
-        function active_round_length(turns) {
-            return turns
-                .reduce((sum, individual) => sum + (individual.skip === true ? 0 : 1), 0);
         }
 
         function make_sim_toolbar(round, turn, view_type) {
@@ -685,7 +710,7 @@
                         sim.cursor.round -= 1;
 
                         let round = sim.rounds[sim.cursor.round];
-                        sim.cursor.turn = active_round_length(round.turns) - 1;
+                        sim.cursor.turn = round.turns.length - 1;
                     } else {
                         sim.cursor.turn = 0;
                     }
@@ -701,15 +726,11 @@
             next_btn.style.lineHeight = "0";
             next_btn.style.width = "3em";
             next_btn.addEventListener('click', (event) => {
-                // With skipping things get funky so we have to check,
-                // as roundlength is dynamic.
+                // Round length is fixed within one round.
                 let last_active_turn = sim.rounds[sim.cursor.round].turns[sim.cursor.turn];
 
                 sim.last_active_turn = last_active_turn;
-
-                let current_round_len = active_round_length(
-                    last_active_turn
-                );
+                let current_round_len = last_active_turn.length;
 
                 sim.cursor.turn += 1;
 
@@ -762,7 +783,7 @@
                 switch (effect_select.value) {
                     case 'Wunde erlitten':
                         individual.ini_change -= 2;
-                        individual.wunden += 1;
+                        individual.wounds += 1;
                         break;
                     case 'Frei ausgewichen':
                         individual.ini_change -= 4;
@@ -822,33 +843,15 @@
             disable_checkbox.style.height = "2em";
             disable_checkbox.checked = individual.skip;
             disable_checkbox.addEventListener('click', (event) => {
-                // Let's pray ref semantics stay the same.
-                let turn_cursor = sim.cursor.turn;
+                individual.skip = disable_checkbox.checked;
 
-                // Apply skip status to all future events.
-                // This makes limited sense otherwise.
-                for (
-                    let round_cursor = sim.cursor.round;
-                    round_cursor < sim.rounds.length;
-                    round_cursor++
-                ) {
-                    let round = sim.rounds[round_cursor];
-                    for (
-                        ;
-                        turn_cursor < round.turns.length;
-                        turn_cursor++
-                    ) {
-                        let future_individual = round.turns[turn_cursor]
-                            .find(future_individual => individual.uuid == future_individual.uuid);
+                // Preserve skip order, show them skipped in order of skip
+                // click.
+                sim.rounds[sim.cursor.round].to_be_skipped_individuals.push(
+                    individual
+                );
 
-                        future_individual.skip = disable_checkbox.checked;
-                    }
-
-                    // Start at 0 for next rounds.
-                    turn_cursor = 0;
-                }
-
-                render_sim();
+                // No need to re-render.
             });
             flex_box.appendChild(disable_checkbox);
 
@@ -872,12 +875,26 @@
             return initiative_input;
         }
 
+        function make_sim_skip_individual(name) {
+            let node = document.createElement('div');
+            node.className = "individual";
+            node.style.backgroundColor = "#eae8e8";
+
+            // Keep style uniform.
+            let pointer_box = document.createElement('div');
+            pointer_box.style.width = "1em";
+            pointer_box.style.height = "1em";
+            pointer_box.style.padding = "0.14em";
+            node.appendChild(pointer_box);
+
+            node.appendChild(document.createTextNode(name));
+
+            return node;
+        }
+
         function make_sim_individual(color, individual, is_current, is_history) {
             let node = document.createElement('div');
             node.className = "individual";
-            node.style.display = "flex";
-            node.style.flexDirection = "row";
-            node.style.alignItems = "center";
             node.style.backgroundColor = color;
 
             let pointer_box = document.createElement('div');
@@ -898,9 +915,7 @@
             name_node.style.whiteSpace = "nowrap";
             name_node.style.marginRight = "0.5em";
             name_node.appendChild(document.createTextNode(
-                individual.skip
-                    ? individual.name
-                    : `${individual.action} ${individual.name}`
+                `${individual.action} ${individual.name}`
             ));
             node.appendChild(name_node);
 
