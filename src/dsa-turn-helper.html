@@ -162,6 +162,7 @@
             display: flex;
             align-items: center;
             flex-direction: row;
+            padding-left: 0.15em;
         }
 
         .individual>div {
@@ -357,6 +358,7 @@
             node.className = 'party-toolbar';
             node.style.backgroundColor = party.color;
             node.style.display = 'flex';
+            node.style.paddingLeft = '0.15em';
 
             node.appendChild(document.createTextNode(party.name));
 
@@ -559,7 +561,19 @@
             let new_sim_box_node = document.createElement('div');
             new_sim_box_node.id = 'turn-view';
 
-            let on_start = (change) => {
+            let sim_start_btn = document.createElement('button');
+            sim_start_btn.textContent = 'Start';
+            sim_start_btn.style.height = '2.2em';
+            sim_start_btn.addEventListener('click', (change) => {
+                individuals.forEach(individual => {
+                    // Give unassigned ones a default val.
+                    individual.initial_ini_roll = individual.initial_ini_roll === undefined
+                        ? roll_d6()
+                        : individual.initial_ini_roll;
+
+                    individual.initiative += individual.initial_ini_roll;
+                });
+
                 sim = {
                     cursor: {
                         round: 0,
@@ -575,33 +589,13 @@
                 sim.last_active_turn = sim.rounds[sim.cursor.round].turns[sim.cursor.turn];
 
                 render_sim();
-            };
-
-            let action_node = document.createElement('div');
-
-            let auto_roll_btn = document.createElement('button');
-            auto_roll_btn.textContent = 'Auto Roll';
-            auto_roll_btn.style.height = '2.2em';
-            auto_roll_btn.addEventListener('click', (change) => {
-                individuals.forEach(individual => {
-                    individual.initial_ini_roll = roll_d6();
-                });
-
-                on_start();
             });
-            action_node.appendChild(auto_roll_btn);
-
-            let sim_start_btn = document.createElement('button');
-            sim_start_btn.textContent = 'Start';
-            sim_start_btn.style.height = '2.2em';
-            sim_start_btn.addEventListener('click', on_start);
-            action_node.appendChild(sim_start_btn);
 
             new_sim_box_node.appendChild(make_sim_toolbar(
                 0,
                 -1,
                 'INI Roll',
-                action_node
+                sim_start_btn
             ));
             new_sim_box_node.appendChild(document.createElement('hr'));
 
@@ -612,11 +606,10 @@
 
                 let name_box = document.createElement('div');
                 name_box.className = 'individual-sim-name';
-                // name_box.style.marginLeft = '1.15em';
                 name_box.appendChild(document.createTextNode(individual.name));
                 node.appendChild(name_box);
 
-                let ini_input = make_custom_initative_input(individual, (event) => {
+                let ini_input = make_custom_initative_input(individual, 'INI roll', (event) => {
                     individual.initial_ini_roll = Number(event.target.value);
                 });
 
@@ -647,7 +640,6 @@
                 .map(individual => {
                     const ini_change = val_or_0(individual.ini_change);
                     const reversible_negatie_effects = val_or_0(individual.reversible_negatie_effects);
-                    const initial_ini_roll = val_or_0(individual.initial_ini_roll);
 
                     return {
                         name: individual.name,
@@ -658,8 +650,8 @@
                         color: individual.color,
                         wounds: individual.wounds,
                         base_ini_maxed: individual.base_ini_maxed,
+                        initial_ini_roll: individual.initial_ini_roll,
                         reversible_negatie_effects,
-                        initial_ini_roll,
                         ini_change: 0,
                     };
                 });
@@ -948,11 +940,11 @@
             return flex_box;
         }
 
-        function make_custom_initative_input(individual, on_change) {
+        function make_custom_initative_input(individual, placeholder, on_change) {
             let initiative_input = document.createElement('input');
             initiative_input.type = 'number';
             initiative_input.style.fontSize = '0.8em';
-            initiative_input.placeholder = 'INI add';
+            initiative_input.placeholder = placeholder;
             initiative_input.style.margin = '0 0.1em 0 0.65em';
             initiative_input.style.width = '4.2em';
             initiative_input.addEventListener('change', on_change);
@@ -1027,7 +1019,7 @@
 
             if (individual.manual_ini_input) {
                 node.appendChild(document.createTextNode('I:'));
-                let ini_input = make_custom_initative_input(individual, (event) => {
+                let ini_input = make_custom_initative_input(individual, 'INI add', (event) => {
                     individual.ini_change += Number(event.target.value);
                     individual.manual_ini_input = false;
                     render_sim();
