@@ -89,23 +89,12 @@
             flex: 50%;
         }
 
-        .individual-name-input {
-            width: 8em;
-        }
-
-        .inidividual-num-input {
-            width: 4.75em;
-        }
-
         .individual-sim-input {
             width: 3em;
         }
 
-        .individual-sim-name {
+        .individual-name {
             width: 10em;
-            text-overflow: ellipsis;
-            overflow: hidden;
-            white-space: nowrap;
         }
 
         /* Responsive layout - makes a one column-layout instead of two-column layout */
@@ -134,19 +123,11 @@
                 padding: 0;
             }
 
-            .individual-name-input {
-                width: 4.5em;
-            }
-
-            .inidividual-num-input {
-                width: 3em;
-            }
-
             .individual-sim-input {
                 width: 2em;
             }
 
-            .individual-sim-name {
+            .individual-name {
                 width: 5em;
             }
 
@@ -163,6 +144,7 @@
             align-items: center;
             flex-direction: row;
             padding-left: 0.15em;
+            flex-wrap: wrap;
         }
 
         .individual>div {
@@ -291,15 +273,15 @@
         let parties = [
             {
                 name: 'Players', color: '#5591ff', individuals: [
-                    { name: 'Gubo Der Weise', health: 33, initiative: 12 },
+                    { name: 'Gubo der Weise', health: 33, initiative: 12 },
                     { name: 'Bratna die Schnelle', health: 10, initiative: 1 },
-                    { name: 'Anoyah die Schlaue', health: 27, initiative: 17 },
+                    { name: 'Anoyah die Schlaue', health: 27, initiative: 17, aufmerksam: true },
                 ]
             },
             {
                 name: 'Enemies', color: '#ff417e', individuals: [
                     { name: 'Midlife-crisis Troll', health: 54, initiative: 7 },
-                    { name: 'Echte Schlange', health: 6, initiative: 25 },
+                    { name: 'Echte Schlange', health: 6, initiative: 25, aufmerksam: true, kampfgespür: true },
                 ]
             },
         ];
@@ -374,20 +356,6 @@
             add_input_restore(name_input, 'name_input', party, party_id);
             flex_box.appendChild(name_input);
 
-            let health_input = document.createElement('input');
-            health_input.className = 'inidividual-num-input';
-            health_input.type = 'number';
-            health_input.placeholder = 'Health';
-            add_input_restore(health_input, 'health_input', party, party_id);
-            flex_box.appendChild(health_input);
-
-            let initiative_input = document.createElement('input');
-            initiative_input.className = 'inidividual-num-input';
-            initiative_input.type = 'number';
-            initiative_input.placeholder = 'INI Base';
-            add_input_restore(initiative_input, 'initiative_input', party, party_id);
-            flex_box.appendChild(initiative_input);
-
             let add_btn = document.createElement('button');
             add_btn.textContent = 'Add';
             add_btn.style.margin = '0 0 0 0.3em';
@@ -408,10 +376,7 @@
                     }
                 }
 
-                let health = Number(health_input.value);
-                let initiative = Number(initiative_input.value);
-
-                parties[party_id].individuals.push({ name, health, initiative });
+                parties[party_id].individuals.push({ name });
                 render_parties();
             });
             flex_box.appendChild(add_btn);
@@ -430,7 +395,181 @@
             return node;
         }
 
-        // individual {name: str, health: num, initiative: num}
+        function add_individual_info(node, individual) {
+            if (individual.health !== undefined) {
+                let health_node = document.createElement('div');
+                health_node.style.marginRight = '0.65em';
+                health_node.style.width = '3.5em';
+                health_node.appendChild(document.createTextNode(
+                    `H: ${individual.health}`
+                ));
+                node.appendChild(health_node);
+            }
+
+            if (individual.initiative !== undefined) {
+                let initiative_node = document.createElement('div');
+                // initiative_node.style.marginRight = '1em';
+                initiative_node.style.width = '3.5em';
+                initiative_node.appendChild(document.createTextNode(
+                    `I: ${individual.initiative}`
+                ));
+                node.appendChild(initiative_node);
+            }
+        }
+
+        function make_attr_num_input() {
+            let input = document.createElement('input');
+            input.style.width = '4.5em';
+            input.style.fontSize = '0.8em';
+            input.type = 'number';
+
+            return input;
+        }
+
+        function make_attr_checkbox() {
+            let checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.name = 'checkbox';
+            checkbox.style.margin = '0 0.8em';
+            checkbox.style.width = '2em';
+            checkbox.style.height = '2em';
+
+            return checkbox;
+        }
+
+        function add_edit_input(input_box, individual) {
+            if (individual.edit_type === undefined) {
+                return;
+            }
+
+            const edit_type = individual.edit_type;
+            // switch scopes are a hassle here.
+            if (edit_type === 'Health') {
+                let input = make_attr_num_input();
+                if (individual.health !== undefined) {
+                    input.value = individual.health;
+                } else {
+                    input.placeholder = 'Health';
+                }
+
+                input.addEventListener('change', (event) => {
+                    individual.health = Number(event.target.value);
+                });
+                input_box.appendChild(input);
+            } else if (edit_type === 'Initiative') {
+                let input = make_attr_num_input();
+                if (individual.initiative !== undefined) {
+                    input.value = individual.initiative;
+                } else {
+                    input.placeholder = 'Initiative';
+                }
+
+                input.addEventListener('change', (event) => {
+                    individual.initiative = Number(event.target.value);
+                });
+                input_box.appendChild(input);
+            } else if (edit_type === 'Aufmerksam (A)') {
+                let checkbox = make_attr_checkbox();
+                checkbox.checked = individual.aufmerksam;
+
+                checkbox.addEventListener('click', (event) => {
+                    individual.aufmerksam = checkbox.checked;
+
+                    render_parties();
+                });
+                input_box.appendChild(checkbox);
+            } else if (edit_type === 'Kampfgespür (K)') {
+                let checkbox = make_attr_checkbox();
+                checkbox.checked = individual.kampfgespür;
+
+                checkbox.addEventListener('click', (event) => {
+                    individual.kampfgespür = checkbox.checked;
+
+                    render_parties();
+                });
+                input_box.appendChild(checkbox);
+            } else {
+                console.error(`Unknown individual.edit_type: ${individual.edit_type}`);
+            }
+        }
+
+        function add_individual_edit(node, individual) {
+            let attribute_select = document.createElement('select');
+            attribute_select.style.margin = '0';
+            attribute_select.style.fontSize = '0.8em';
+            // attribute_select.style.width = '7em';
+
+            let select_placeholder = document.createElement('option');
+            select_placeholder.disabled = true;
+            select_placeholder.selected = true;
+            select_placeholder.hidden = true;
+            select_placeholder.appendChild(document.createTextNode('attribute'));
+            attribute_select.appendChild(select_placeholder);
+
+            attribute_select.appendChild(make_select_option('Health'));
+            attribute_select.appendChild(make_select_option('Initiative'));
+            attribute_select.appendChild(make_select_option('Aufmerksam (A)'));
+            attribute_select.appendChild(make_select_option('Kampfgespür (K)'));
+
+            if (individual.edit_type !== undefined) {
+                attribute_select.value = individual.edit_type;
+            }
+
+            attribute_select.addEventListener('change', (event) => {
+                individual.edit_type = attribute_select.value;
+
+                render_parties();
+            });
+
+            node.appendChild(attribute_select);
+
+            let input_box = document.createElement('div');
+            // input_box.style.width = '6em';
+            input_box.style.display = 'flex';
+            input_box.style.alignItems = 'center';
+            input_box.style.marginLeft = '0.5em';
+            add_edit_input(input_box, individual);
+            node.appendChild(input_box);
+        }
+
+        function make_individual_name(individual) {
+            let box = document.createElement('div');
+            box.className = 'individual-name';
+            box.style.display = 'flex';
+            box.style.alignItems = 'center';
+            box.style.marginRight = '0.5em';
+
+            let name_node = document.createElement('div');
+            name_node.style.textOverflow = 'ellipsis';
+            name_node.style.overflow = 'hidden';
+            name_node.style.whiteSpace = 'nowrap';
+            name_node.appendChild(document.createTextNode(individual.name));
+            box.appendChild(name_node);
+
+            let icons = [];
+
+            if (individual.aufmerksam === true) {
+                icons.push('A');
+            }
+
+            if (individual.kampfgespür === true) {
+                icons.push('K');
+            }
+
+            if (icons.length > 0) {
+                const icon_str = `(${icons.join(' ')})`;
+                let icon_node = document.createElement('div');
+                icon_node.style.fontSize = '0.7em';
+                icon_node.style.marginLeft = '0.3em';
+                icon_node.style.whiteSpace = 'nowrap';
+                icon_node.appendChild(document.createTextNode(icon_str));
+                box.appendChild(icon_node);
+            }
+
+            return box;
+        }
+
+        // individual {name: str, ...}
         function make_individual(color, individual, party_id, id) {
             let node = document.createElement('div');
             node.className = 'individual';
@@ -438,26 +577,15 @@
             node.style.flexDirection = 'row';
             node.style.backgroundColor = color;
 
-            let name_node = document.createElement('div');
-            name_node.style.width = '10em';
-            name_node.style.textOverflow = 'ellipsis';
-            name_node.style.overflow = 'hidden';
-            name_node.style.whiteSpace = 'nowrap';
-            name_node.style.marginRight = '0.5em';
-            name_node.appendChild(document.createTextNode(individual.name));
-            node.appendChild(name_node);
+            node.appendChild(make_individual_name(individual));
 
-            let health_node = document.createElement('div');
-            health_node.style.marginRight = '0.65em';
-            health_node.style.width = '3.5em';
-            health_node.appendChild(document.createTextNode(`H: ${individual.health}`));
-            node.appendChild(health_node);
+            const edit = individual.edit === true;
 
-            let initiative_node = document.createElement('div');
-            // initiative_node.style.marginRight = '1em';
-            initiative_node.style.width = '3.5em';
-            initiative_node.appendChild(document.createTextNode(`I: ${individual.initiative}`));
-            node.appendChild(initiative_node);
+            if (edit) {
+                add_individual_edit(node, individual);
+            } else {
+                add_individual_info(node, individual);
+            }
 
             let flex_box = document.createElement('div');
             flex_box.style.display = 'flex';
@@ -465,6 +593,23 @@
             flex_box.style.justifyContent = 'flex-end';
             flex_box.style.alignItems = 'center';
             flex_box.style.margin = '0 0 0 auto';
+
+            let edit_btn = document.createElement('button');
+            edit_btn.textContent = edit ? 'Done' : 'Edit';
+            edit_btn.style.marginRight = '0.5em';
+            edit_btn.style.fontSize = '0.625em';
+            let on_edit = edit
+                ? (event) => {
+                    individual.edit = false;
+                    render_parties();
+                }
+                : (event) => {
+                    individual.edit = true;
+                    render_parties();
+                };
+
+            edit_btn.addEventListener('click', on_edit);
+            flex_box.appendChild(edit_btn);
 
             let delete_btn = document.createElement('button');
             delete_btn.textContent = 'Delete';
@@ -486,13 +631,20 @@
         let sim = {};
 
         function make_action_2_individual(action_1_individual) {
-            return {
+            const result = {
                 uuid: action_1_individual.uuid,
-                name: action_1_individual.name,
+                name: `2. ${action_1_individual.name}`,
+                aufmerksam: action_1_individual.aufmerksam,
+                kampfgespür: action_1_individual.kampfgespür,
                 initiative: action_1_individual.initiative - 8,
                 action: 2,
                 color: action_1_individual.color,
             };
+
+            // Not the cleanest way to do this, but reuses the name display logic.
+            action_1_individual.name = `1. ${action_1_individual.name}`;
+
+            return result;
         }
 
         function make_action_split(individuals) {
@@ -605,10 +757,10 @@
                 node.style.height = '1.285em'; // Match sim style.
                 node.style.backgroundColor = individual.color;
 
-                let name_box = document.createElement('div');
-                name_box.className = 'individual-sim-name';
-                name_box.appendChild(document.createTextNode(individual.name));
-                node.appendChild(name_box);
+                // let name_box = document.createElement('div');
+                // name_box.className = 'individual-sim-name';
+                // name_box.appendChild(document.createTextNode(individual.name));
+                node.appendChild(make_individual_name(individual));
 
                 let ini_input = make_custom_initative_input(individual, 'INI roll', (event) => {
                     individual.initial_ini_roll = Number(event.target.value);
@@ -650,6 +802,8 @@
                         action: individual.action,
                         color: individual.color,
                         wounds: individual.wounds,
+                        aufmerksam: individual.aufmerksam,
+                        kampfgespür: individual.kampfgespür,
                         base_ini_maxed: individual.base_ini_maxed,
                         initial_ini_roll: individual.initial_ini_roll,
                         reversible_negatie_effects,
@@ -988,14 +1142,15 @@
             }
             node.appendChild(pointer_box);
 
-            let name_node = document.createElement('div');
-            name_node.className = 'individual-sim-name';
-            name_node.style.marginRight = '0.5em';
-            name_node.appendChild(document.createTextNode(
-                `${individual.action} ${individual.name}`
-            ));
-            node.appendChild(name_node);
+            // let name_node = document.createElement('div');
+            // name_node.className = 'individual-sim-name';
+            // name_node.style.marginRight = '0.5em';
+            // name_node.appendChild(document.createTextNode(
+            //     `${individual.action} ${individual.name}`
+            // ));
+            // node.appendChild(name_node);
 
+            node.appendChild(make_individual_name(individual));
 
             if (individual.action !== 1) {
                 // Second actions are too noisy and confusing otherwise.
