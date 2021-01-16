@@ -706,6 +706,16 @@
                 return;
             }
 
+            const no_ini_individual = individuals.find((individual) => {
+                return individual.initiative === undefined;
+            });
+
+
+            if (no_ini_individual !== undefined) {
+                alert(`${no_ini_individual.name} has to have an initative value.`);
+                return;
+            }
+
             make_ini_collection(individuals);
         }
 
