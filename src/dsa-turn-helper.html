@@ -273,15 +273,55 @@
         let parties = [
             {
                 name: 'Players', color: '#5591ff', individuals: [
-                    { name: 'Gubo der Weise', health: 33, initiative: 12 },
-                    { name: 'Bratna die Schnelle', health: 10, initiative: 1 },
-                    { name: 'Anoyah die Schlaue', health: 27, initiative: 17, aufmerksam: true },
+                    {
+                        name: 'Gubo der Weise',
+                        health: 33,
+                        initiative: 12,
+                        attack: 9,
+                        parry: 8,
+                        armor: 0,
+                        ws: 6,
+                    },
+                    {
+                        name: 'Bratna die Schnelle',
+                        health: 10,
+                        initiative: 1,
+                        attack: 15,
+                        parry: 11,
+                        armor: 1,
+                        ws: 7,
+                    },
+                    {
+                        name: 'Anoyah die Schlaue',
+                        health: 27,
+                        initiative: 17,
+                        aufmerksam: true,
+                        attack: 14,
+                        parry: 12,
+                        armor: 1,
+                        ws: 6,
+                    },
                 ]
             },
             {
                 name: 'Enemies', color: '#ff417e', individuals: [
-                    { name: 'Midlife-crisis Troll', health: 54, initiative: 7 },
-                    { name: 'Echte Schlange', health: 6, initiative: 25, aufmerksam: true, kampfgespür: true },
+                    {
+                        name: 'Midlife-crisis Troll',
+                        health: 54,
+                        initiative: 7,
+                        attack: 16,
+                        parry: 18,
+                        armor: 5,
+                    },
+                    {
+                        name: 'Echte Schlange',
+                        health: 6,
+                        initiative: 25,
+                        aufmerksam: true,
+                        kampfgespür: true,
+                        attack: 7,
+                        ws: 3,
+                    },
                 ]
             },
         ];
@@ -384,6 +424,7 @@
             let delete_btn = document.createElement('button');
             delete_btn.textContent = 'Delete Party';
             delete_btn.style.margin = '0 0 0 2.3em';
+            delete_btn.style.width = '7.25em'; // Same width as below.
             delete_btn.addEventListener('click', (event) => {
                 parties.splice(party_id, 1);
                 render_parties();
@@ -395,26 +436,33 @@
             return node;
         }
 
-        function add_individual_info(node, individual) {
-            if (individual.health !== undefined) {
-                let health_node = document.createElement('div');
-                health_node.style.marginRight = '0.65em';
-                health_node.style.width = '3.5em';
-                health_node.appendChild(document.createTextNode(
-                    `H: ${individual.health}`
+        function add_individual_info_field(node, label, val) {
+            if (val !== undefined) {
+                let val_node = document.createElement('div');
+                val_node.style.width = '3.5em';
+                val_node.appendChild(document.createTextNode(
+                    `${label}: ${val}`
                 ));
-                node.appendChild(health_node);
+                node.appendChild(val_node);
             }
+        }
 
-            if (individual.initiative !== undefined) {
-                let initiative_node = document.createElement('div');
-                // initiative_node.style.marginRight = '1em';
-                initiative_node.style.width = '3.5em';
-                initiative_node.appendChild(document.createTextNode(
-                    `I: ${individual.initiative}`
-                ));
-                node.appendChild(initiative_node);
-            }
+        function add_individual_info(node, individual) {
+            // Group as box to get better looking layout.
+            // Moves all items to second 'row' if overflow.
+            let box = document.createElement('div');
+            box.style.display = 'flex';
+            box.style.flexDirection = 'row';
+            box.style.alignItems = 'center';
+
+            add_individual_info_field(box, 'LP', individual.health);
+            add_individual_info_field(box, 'IB', individual.initiative);
+            add_individual_info_field(box, 'AT', individual.attack);
+            add_individual_info_field(box, 'PA', individual.parry);
+            add_individual_info_field(box, 'RS', individual.armor);
+            add_individual_info_field(box, 'WS', individual.ws);
+
+            node.appendChild(box);
         }
 
         function make_attr_num_input() {
@@ -437,63 +485,64 @@
             return checkbox;
         }
 
+        function add_num_edit_input(input_box, individual, name, field) {
+            if (individual.edit_type === name) {
+                let input = make_attr_num_input();
+                if (individual[field] !== undefined) {
+                    input.value = individual[field];
+                } else {
+                    input.placeholder = name;
+                }
+
+                input.addEventListener('change', (event) => {
+                    individual[field] = Number(event.target.value);
+                });
+
+                input.addEventListener('keyup', (event) => {
+                    if (event.key === 'Enter') {
+                        render_parties();
+                    }
+                });
+
+                input_box.appendChild(input);
+            }
+        }
+
+        function add_bool_edit_input(input_box, individual, name, field) {
+            if (individual.edit_type === name) {
+                let checkbox = make_attr_checkbox();
+                checkbox.checked = individual[field];
+
+                checkbox.addEventListener('click', (event) => {
+                    individual[field] = checkbox.checked;
+
+                    render_parties();
+                });
+                input_box.appendChild(checkbox);
+            }
+        }
+
         function add_edit_input(input_box, individual) {
             if (individual.edit_type === undefined) {
                 return;
             }
 
-            const edit_type = individual.edit_type;
-            // switch scopes are a hassle here.
-            if (edit_type === 'Health') {
-                let input = make_attr_num_input();
-                if (individual.health !== undefined) {
-                    input.value = individual.health;
-                } else {
-                    input.placeholder = 'Health';
-                }
+            add_num_edit_input(input_box, individual, 'Lebenspunkte (LP)', 'health');
+            add_num_edit_input(input_box, individual, 'Initiative-Basis (IB)', 'initiative');
+            add_num_edit_input(input_box, individual, 'Attacke (AT)', 'attack');
+            add_num_edit_input(input_box, individual, 'Parade (PA)', 'parry');
+            add_num_edit_input(input_box, individual, 'Rüstungsschutz (RS)', 'armor');
+            add_num_edit_input(input_box, individual, 'Wundschwelle (WS)', 'ws');
 
-                input.addEventListener('change', (event) => {
-                    individual.health = Number(event.target.value);
-                });
-                input_box.appendChild(input);
-            } else if (edit_type === 'Initiative') {
-                let input = make_attr_num_input();
-                if (individual.initiative !== undefined) {
-                    input.value = individual.initiative;
-                } else {
-                    input.placeholder = 'Initiative';
-                }
-
-                input.addEventListener('change', (event) => {
-                    individual.initiative = Number(event.target.value);
-                });
-                input_box.appendChild(input);
-            } else if (edit_type === 'Aufmerksam (A)') {
-                let checkbox = make_attr_checkbox();
-                checkbox.checked = individual.aufmerksam;
-
-                checkbox.addEventListener('click', (event) => {
-                    individual.aufmerksam = checkbox.checked;
-
-                    render_parties();
-                });
-                input_box.appendChild(checkbox);
-            } else if (edit_type === 'Kampfgespür (K)') {
-                let checkbox = make_attr_checkbox();
-                checkbox.checked = individual.kampfgespür;
-
-                checkbox.addEventListener('click', (event) => {
-                    individual.kampfgespür = checkbox.checked;
-
-                    render_parties();
-                });
-                input_box.appendChild(checkbox);
-            } else {
-                console.error(`Unknown individual.edit_type: ${individual.edit_type}`);
-            }
+            add_bool_edit_input(input_box, individual, 'Aufmerksam (A)', 'aufmerksam');
+            add_bool_edit_input(input_box, individual, 'Kampfgespür (K)', 'kampfgespür');
         }
 
         function add_individual_edit(node, individual) {
+            let box = document.createElement('div');
+            box.style.display = 'flex';
+            box.style.alignItems = 'center';
+
             let attribute_select = document.createElement('select');
             attribute_select.style.margin = '0';
             attribute_select.style.fontSize = '0.8em';
@@ -506,8 +555,12 @@
             select_placeholder.appendChild(document.createTextNode('attribute'));
             attribute_select.appendChild(select_placeholder);
 
-            attribute_select.appendChild(make_select_option('Health'));
-            attribute_select.appendChild(make_select_option('Initiative'));
+            attribute_select.appendChild(make_select_option('Lebenspunkte (LP)'));
+            attribute_select.appendChild(make_select_option('Initiative-Basis (IB)'));
+            attribute_select.appendChild(make_select_option('Attacke (AT)'));
+            attribute_select.appendChild(make_select_option('Parade (PA)'));
+            attribute_select.appendChild(make_select_option('Rüstungsschutz (RS)'));
+            attribute_select.appendChild(make_select_option('Wundschwelle (WS)'));
             attribute_select.appendChild(make_select_option('Aufmerksam (A)'));
             attribute_select.appendChild(make_select_option('Kampfgespür (K)'));
 
@@ -521,7 +574,7 @@
                 render_parties();
             });
 
-            node.appendChild(attribute_select);
+            box.appendChild(attribute_select);
 
             let input_box = document.createElement('div');
             // input_box.style.width = '6em';
@@ -529,7 +582,9 @@
             input_box.style.alignItems = 'center';
             input_box.style.marginLeft = '0.5em';
             add_edit_input(input_box, individual);
-            node.appendChild(input_box);
+            box.appendChild(input_box);
+
+            node.appendChild(box);
         }
 
         function make_individual_name(individual) {
@@ -577,14 +632,24 @@
             node.style.flexDirection = 'row';
             node.style.backgroundColor = color;
 
-            node.appendChild(make_individual_name(individual));
+            let top_box = document.createElement('div');
+            top_box.style.display = 'flex';
+            top_box.style.flexDirection = 'row';
+            top_box.style.justifyContent = 'space-between';
+
+            top_box.style.width = '100%';
+
+            let individual_name = make_individual_name(individual);
+            // We know we have more space in this case.
+            individual_name.style.width = 'fit-content';
+            individual_name.style.textDecoration = 'underline';
+
+            top_box.appendChild(individual_name);
 
             const edit = individual.edit === true;
 
-            if (edit) {
-                add_individual_edit(node, individual);
-            } else {
-                add_individual_info(node, individual);
+            if (individual.edit) {
+                add_individual_edit(top_box, individual);
             }
 
             let flex_box = document.createElement('div');
@@ -592,11 +657,11 @@
             flex_box.style.flexDirection = 'row';
             flex_box.style.justifyContent = 'flex-end';
             flex_box.style.alignItems = 'center';
-            flex_box.style.margin = '0 0 0 auto';
+            // flex_box.style.margin = '0 0 0 auto';
 
             let edit_btn = document.createElement('button');
             edit_btn.textContent = edit ? 'Done' : 'Edit';
-            edit_btn.style.marginRight = '0.5em';
+            edit_btn.style.marginRight = '0.4em';
             edit_btn.style.fontSize = '0.625em';
             let on_edit = edit
                 ? (event) => {
@@ -621,7 +686,16 @@
             });
             flex_box.appendChild(delete_btn);
 
-            node.appendChild(flex_box);
+            top_box.appendChild(flex_box);
+
+            node.appendChild(top_box);
+
+            let spacer = document.createElement('div');
+            spacer.style.width = '100%';
+            spacer.style.height = '0.3em';
+            node.appendChild(spacer);
+
+            add_individual_info(node, individual);
 
             return node;
         }
