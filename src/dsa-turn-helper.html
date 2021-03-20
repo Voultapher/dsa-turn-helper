@@ -252,10 +252,13 @@
             render_parties();
         }
 
+        // Bump every time any change is made to the parties file layout.
+        const PARTY_FILE_VERSION = 1;
+
         function download_parties() {
             let current_date = new Date().toJSON();
             let filename = `dsa-turn-helper-${current_date}.json`;
-            let text = JSON.stringify(parties);
+            let text = JSON.stringify({ parties, version: PARTY_FILE_VERSION });
 
             let element = document.createElement('a');
             element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
@@ -282,7 +285,13 @@
             reader.onload = (eve) => {
                 let contents = eve.target.result;
                 let parsed_parties = JSON.parse(contents);
-                parties = parsed_parties;
+
+                if (parsed_parties.version !== PARTY_FILE_VERSION) {
+                    alert('Incompatible parties files, too old.');
+                    return;
+                }
+
+                parties = parsed_parties.parties;
                 render_parties();
 
             };
