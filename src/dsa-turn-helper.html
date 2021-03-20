@@ -849,13 +849,17 @@
                     individual.initiative += individual.initial_ini_roll;
                 });
 
+                let sim_individuals = individuals.filter((individual) => (
+                    individual.participate !== false
+                ));
+
                 sim = {
                     cursor: {
                         round: 0,
                         turn: 0,
                     },
                     rounds: [make_new_round({
-                        turns: [make_action_split(individuals)],
+                        turns: [make_action_split(sim_individuals)],
                         skipped_individuals: [],
                         to_be_skipped_individuals: []
                     })],
@@ -879,17 +883,42 @@
                 node.className = 'individual';
                 node.style.height = '1.285em'; // Match sim style.
                 node.style.backgroundColor = individual.color;
+                node.style.justifyContent = 'space-between';
 
-                // let name_box = document.createElement('div');
-                // name_box.className = 'individual-sim-name';
-                // name_box.appendChild(document.createTextNode(individual.name));
-                node.appendChild(make_individual_name(individual));
+                let name_box = document.createElement('div');
+                name_box.style.display = 'flex';
+                name_box.style.alignItems = 'center';
+
+                name_box.appendChild(make_individual_name(individual));
 
                 let ini_input = make_custom_initative_input(individual, 'INI roll', (event) => {
                     individual.initial_ini_roll = Number(event.target.value);
                 });
 
-                node.appendChild(ini_input);
+                name_box.appendChild(ini_input);
+
+                node.appendChild(name_box);
+
+                let skip_box = document.createElement('div');
+                skip_box.style.display = 'flex';
+                skip_box.style.alignItems = 'center';
+
+                let skip_label = document.createElement('label');
+                skip_label.className = 'individual-skip-label';
+                skip_label.for = 'checkbox';
+                skip_label.textContent = 'participate';
+                skip_label.style.color = '#4F4F4F';
+
+                let sim_checkbox = make_attr_checkbox();
+                sim_checkbox.checked = true;
+                sim_checkbox.addEventListener('click', (event) => {
+                    individual.participate = sim_checkbox.checked;
+                });
+
+                skip_box.appendChild(skip_label);
+                skip_box.appendChild(sim_checkbox);
+
+                node.appendChild(skip_box);
 
                 new_sim_box_node.appendChild(node);
             });
