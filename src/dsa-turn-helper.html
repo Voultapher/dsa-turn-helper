@@ -275,6 +275,7 @@
                 name: 'Players', color: '#5591ff', individuals: [
                     {
                         name: 'Gubo der Weise',
+                        uuid: uuidv4(),
                         health: 33,
                         initiative: 12,
                         attack: 9,
@@ -284,6 +285,7 @@
                     },
                     {
                         name: 'Bratna die Schnelle',
+                        uuid: uuidv4(),
                         health: 10,
                         initiative: 1,
                         attack: 15,
@@ -293,6 +295,7 @@
                     },
                     {
                         name: 'Anoyah die Schlaue',
+                        uuid: uuidv4(),
                         health: 27,
                         initiative: 17,
                         aufmerksam: true,
@@ -300,6 +303,8 @@
                         parry: 12,
                         armor: 1,
                         ws: 6,
+                        show_notebox: true,
+                        notebox_text: 'Click on a name to toggle the notebox.'
                     },
                 ]
             },
@@ -307,6 +312,7 @@
                 name: 'Enemies', color: '#ff417e', individuals: [
                     {
                         name: 'Midlife-crisis Troll',
+                        uuid: uuidv4(),
                         health: 54,
                         initiative: 7,
                         attack: 16,
@@ -315,6 +321,7 @@
                     },
                     {
                         name: 'Echte Schlange',
+                        uuid: uuidv4(),
                         health: 6,
                         initiative: 25,
                         aufmerksam: true,
@@ -416,7 +423,7 @@
                     }
                 }
 
-                parties[party_id].individuals.push({ name });
+                parties[party_id].individuals.push({ name, uuid: uuidv4() });
                 render_parties();
             });
             flex_box.appendChild(add_btn);
@@ -624,6 +631,28 @@
             return box;
         }
 
+        function make_notebox(individual) {
+            let notebox = document.createElement('textarea');
+            notebox.rows = 4;
+            notebox.cols = 50;
+
+            notebox.style.marginTop = '0.7em';
+            notebox.style.width = '100%';
+            notebox.style.resize = 'vertical';
+            notebox.style.minHeight = '2.5em';
+
+            if (individual.notebox_text !== undefined) {
+                notebox.appendChild(document.createTextNode(individual.notebox_text));
+            }
+
+            notebox.addEventListener('input', (event) => {
+                // relatively cheap to do as it doesn't re render.
+                individual.notebox_text = notebox.value;
+            }, false);
+
+            return notebox;
+        }
+
         // individual {name: str, ...}
         function make_individual(color, individual, party_id, id) {
             let node = document.createElement('div');
@@ -643,6 +672,12 @@
             // We know we have more space in this case.
             individual_name.style.width = 'fit-content';
             individual_name.style.textDecoration = 'underline';
+            individual_name.style.cursor = 'pointer';
+
+            individual_name.addEventListener('click', (event) => {
+                individual.show_notebox = individual.show_notebox !== true;
+                render_parties();
+            });
 
             top_box.appendChild(individual_name);
 
@@ -696,6 +731,11 @@
             node.appendChild(spacer);
 
             add_individual_info(node, individual);
+
+            if (individual.show_notebox === true) {
+                let notebox = make_notebox(individual);
+                node.appendChild(notebox);
+            }
 
             return node;
         }
@@ -769,7 +809,6 @@
                     let sim_individual = JSON.parse(JSON.stringify(individual));
 
                     sim_individual.color = light_color;
-                    sim_individual.uuid = uuidv4();
                     sim_individual.ini_change = 0;
                     return sim_individual;
                 });
