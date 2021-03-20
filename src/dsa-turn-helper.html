@@ -206,11 +206,27 @@
                 : val;
         }
 
+        function componentToHex(c) {
+            const hex = c.toString(16);
+            return hex.length == 1 ? "0" + hex : hex;
+        }
+
+
+        function random_bg_color() {
+            const x = Math.floor(Math.random() * 256);
+            const y = Math.floor(Math.random() * 256);
+            const z = Math.floor(Math.random() * 256);
+
+            return `#${componentToHex(x)}${componentToHex(y)}${componentToHex(z)}`;
+        }
+
         // --- Parties ---
 
         window.addEventListener('DOMContentLoaded', (event) => {
             document.getElementById('file-input')
                 .addEventListener('change', load_parties, false);
+
+            document.getElementById('party-color').value = random_bg_color();
 
             render_parties();
 
@@ -225,8 +241,12 @@
                 name = 'Die Namenlosen'
             }
 
-            let color = document.getElementById('party-color').value;
+            let party_color = document.getElementById('party-color');
+
+            let color = party_color.value;
             let individuals = [];
+
+            party_color.value = random_bg_color();
 
             parties.push({ name, color, individuals });
             render_parties();
