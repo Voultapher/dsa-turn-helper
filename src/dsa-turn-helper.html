@@ -875,7 +875,11 @@
                         ? roll_d6()
                         : individual.initial_ini_roll;
 
-                    individual.initiative += individual.initial_ini_roll;
+                    individual.active_behinderung = individual.active_behinderung === undefined
+                        ? 0
+                        : individual.active_behinderung;
+
+                    individual.initiative += individual.initial_ini_roll - individual.active_behinderung;
                 });
 
                 let sim_individuals = individuals.filter((individual) => (
@@ -925,6 +929,12 @@
                 });
 
                 name_box.appendChild(ini_input);
+
+                let be_input = make_custom_initative_input(individual, 'BE', (event) => {
+                    individual.active_behinderung = Number(event.target.value);
+                });
+
+                name_box.appendChild(be_input);
 
                 node.appendChild(name_box);
 
@@ -987,6 +997,7 @@
                         kampfgespür: individual.kampfgespür,
                         base_ini_maxed: individual.base_ini_maxed,
                         initial_ini_roll: individual.initial_ini_roll,
+                        active_behinderung: individual.active_behinderung,
                         reversible_negatie_effects,
                         ini_change: 0,
                     };
